@@ -5,7 +5,7 @@
 # Optional parameter: <desc> -- Description of the snapshot, quote-bounded
 # Optional parameter: -t -- Include to do a dry-run
 
-# NOTE: This script expects to find the listed mountpoints.  If not present, it will fail.
+# NOTE: This script expects to find the listed mountpoints.  If not present, it will create them.
 
 source /usr/local/lib/colors
 
