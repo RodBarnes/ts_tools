@@ -24,5 +24,5 @@ Lists the snapshots (created by `ts_backup`) found on the designated device.
 ## ts_restore.sh
 Usage: `sudo ts_restore <snapshot_device> <restore_device> [-d] [snapshot_name]`
 
-Restores a snapshot (created by `ts_backup`).  As written, `ts_restore` is designed to be used from a server's recovery partition and has only tested there.  It should also work from a live image but that has not been tested.
+Restores a snapshot (created by `ts_backup`).  As written, `ts_restore` is designed to be used from a server's recovery partition and has only been tested there.  It should also work from a live image but that has not been tested.
 
