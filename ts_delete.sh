@@ -31,9 +31,9 @@ function show_syntax () {
 }
 
 function mount_backup_device () {
-  sudo mount $backupdevice $backuppath
+  sudo mount $backupdevice $backuppath &> /dev/null
   if [ $? -ne 0 ]; then
-    printx "Unable to mount the backup backupdevice."
+    printx "Unable to mount the backup backupdevice '$backupdevice'."
     exit 2
   fi
 }
@@ -101,7 +101,7 @@ function parse_arguments () {
 
 args=("$@")
 argcnt=$#
-if [ $argcnt == 0 ]; then
+if [[ $argcnt < 1 ]]; then
   show_syntax
 fi
 

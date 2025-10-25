@@ -55,9 +55,9 @@ function mount_backup_device () {
     sudo mkdir $backuppath
   fi
 
-  sudo mount $backupdevice $backuppath
+  sudo mount $backupdevice $backuppath &> /dev/null
   if [ $? -ne 0 ]; then
-    printx "Unable to mount the backup device."
+    printx "Unable to mount the backup device '$backupdevice'."
     exit 2
   fi
 }
@@ -72,9 +72,9 @@ function mount_restore_device () {
     sudo mkdir $restorepath
   fi
 
-  sudo mount $restoredevice $restorepath
+  sudo mount $restoredevice $restorepath &> /dev/null
   if [ $? -ne 0 ]; then
-    printx "Unable to mount the restore device."
+    printx "Unable to mount the restore device '$restoredevice'."
     exit 2
   fi
 }
@@ -315,7 +315,7 @@ function parse_arguments () {
 
 args=("$@")
 argcnt=$#
-if [ $argcnt == 0 ]; then
+if [[ $argcnt < 2 ]]; then
   show_syntax
 fi
 parse_arguments
@@ -325,10 +325,10 @@ if [[ "$EUID" != 0 ]]; then
   exit 1
 fi
 
-if [ ! -e $restoredevice ]; then
-  printx "There is no such device: $restoredevice."
-  exit 2
-fi
+# if [ ! -e $restoredevice ]; then
+#   printx "There is no such device: $restoredevice."
+#   exit 2
+# fi
 
 # --------------------
 # ------- MAIN -------
