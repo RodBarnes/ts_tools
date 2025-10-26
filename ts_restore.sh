@@ -50,15 +50,29 @@ function show_syntax () {
 }
 
 function mount_backup_device () {
+  # Ensure mount point exists
   if [ ! -d $backuppath ]; then
-    printx "'$backuppath' was not found; creating it..."
-    sudo mkdir $backuppath
+    sudo mkdir $backuppath &> /dev/null
+    if [ $? -ne 0 ]; then
+      printx "Unable to locate or created '$backuppath'."
+      exit 2
+    fi
   fi
 
+  # Attempt to mount the device
   sudo mount $backupdevice $backuppath &> /dev/null
   if [ $? -ne 0 ]; then
-    printx "Unable to mount the backup device '$backupdevice'."
+    printx "Unable to mount the backup backupdevice '$backupdevice'."
     exit 2
+  fi
+
+  # Ensure the directory structure exists
+  if [ ! -d $snapshotpath ]; then
+    sudo mkdir $snapshotpath &> /dev/null
+    if [ $? -ne 0 ]; then
+      printx "Unable to locate or create '$snapshotpath'."
+      exit 2
+    fi
   fi
 }
 
@@ -67,11 +81,16 @@ function unmount_backup_device () {
 }
 
 function mount_restore_device () {
+  # Ensure mount point exists
   if [ ! -d $restorepath ]; then
-    printx "'$restorepath' was not found; creating it..."
-    sudo mkdir $restorepath
+    sudo mkdir $restorepath &> /dev/null
+    if [ $? -ne 0 ]; then
+      printx "Unable to locate or created '$restorepath'."
+      exit 2
+    fi
   fi
 
+  # Attempt to mount the device
   sudo mount $restoredevice $restorepath &> /dev/null
   if [ $? -ne 0 ]; then
     printx "Unable to mount the restore device '$restoredevice'."
