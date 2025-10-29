@@ -1,7 +1,5 @@
 # ts_tools
-A collection of `bash` scripts to emulate TimeShift backups on headless systems.  Each is intended to be instantiated within the `$PATH`, set as executable, and without the `.sh` extension.  The recommended location is `/usr/local/bin`.  
-
-(NOTE: Yes, TimeShift has a command line but TimeShift includes all the GUI libraries it needs even if they are needed on a headless system.  Plus, this was a fun project.) 
+A collection of `bash` scripts to emulate TimeShift backups on headless systems.  (NOTE: Yes, TimeShift has a command line but TimeShift includes all the GUI libraries it needs even if they are needed on a headless system.  Plus, this was a fun project.) 
 
 ## ts_backup.sh
 Usage: `sudo ts_backup <device> [-d] [description]`
