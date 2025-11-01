@@ -160,3 +160,5 @@ mount_backup_device
 verify_available_space
 create_snapshot
 unmount_backup_device
+
+echo "✅ Backup complete: $snapshotpath/$snapshotname"

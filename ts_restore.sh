@@ -396,3 +396,5 @@ fi
 
 unmount_backup_device
 unmount_restore_device
+
+echo "✅ Restore complete: $snapshotpath/$snapshotname"
