@@ -301,13 +301,12 @@ function dryrun_snapshot {
 # ------- MAIN -------
 # --------------------
 
+g_bootfile="grubx64.efi"  # Default for non-secure boot
 g_descfile=comment.txt
 g_output_file_list=()
 backuppath="/mnt/backup"
 backupdir="ts"
 restorepath="/mnt/restore"
-
-g_bootfile="grubx64.efi"  # Default for non-secure boot
 
 trap 'unmount_device_at_path "$backuppath"; unmount_device_at_path "$restorepath"' EXIT
 
