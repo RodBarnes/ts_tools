@@ -78,13 +78,12 @@ function unmount_device_at_path {
 function select_snapshot {
   local path=$1
 
-  # Get the snapshots and allow selecting
-  echo "Listing backup files..."
+  local snapshots=() comment count name
 
-  # Get the snapshots
-  unset snapshots
+  # Get the snapshots and allow selecting
+  echo "Listing backup files..." >&2
+
   while IFS= read -r backup; do
-    echo "path=$path/$backup/$g_descfile" >&2
     if [ -f "$path/$backup/$g_descfile" ]; then
       comment=$(cat "$path/$backup/$g_descfile")
     else
@@ -106,14 +105,16 @@ function select_snapshot {
           break
           ;;
         *)
-          snapshotname="${selection%%:*}"
+          name="${selection%%:*}"
           break
           ;;
       esac
     else
-      printx "Invalid selection. Please enter a number between 1 and $count."
+      printx "Invalid selection. Please enter a number between 1 and $count." >&2
     fi
   done
+
+  echo "$name"
 }
 
 function get_bootfile {
@@ -393,7 +394,7 @@ mount_device_at_path "$restoredevice" "$restorepath"
 mount_device_at_path "$backupdevice" "$backuppath" "$backupdir"
 
 if [ -z $snapshotname ]; then
-  select_snapshot "$backuppath/$backupdir"
+  snapshotname=$(select_snapshot "$backuppath/$backupdir")
 fi
 
 if [ ! -z $snapshotname ]; then
