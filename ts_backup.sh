@@ -13,7 +13,7 @@ scriptname=$(basename $0)
 backuppath=/mnt/backup
 snapshotpath=$backuppath/snapshots
 snapshotname=$(date +%Y-%m-%d-%H%M%S)
-descfile=snapshot.desc
+descfile=comment.txt
 minspace=5000000
 regex="^\S{8}-\S{4}-\S{4}-\S{4}-\S{12}$"
 

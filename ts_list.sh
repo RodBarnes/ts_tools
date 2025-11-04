@@ -10,8 +10,7 @@ source /usr/local/lib/colors
 scriptname=$(basename $0)
 backuppath=/mnt/backup
 snapshotpath=$backuppath/snapshots
-descfile=snapshot.desc
-regex="^\S{8}-\S{4}-\S{4}-\S{4}-\S{12}$"
+descfile=comment.txt
 regex="^\S{8}-\S{4}-\S{4}-\S{4}-\S{12}$"
 
 function printx {
