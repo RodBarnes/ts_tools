@@ -297,6 +297,7 @@ function restore_dryrun {
 g_descfile=comment.txt
 g_output_file_list=()
 backuppath="/mnt/backup"
+backupdir="ts"
 restorepath="/mnt/restore"
 snapshotpath="$backuppath/ts"
 excludespathname="/etc/ts_excludes"
@@ -383,7 +384,7 @@ if [ ! -e $restoredevice ]; then
 fi
 
 mount_device_at_path "$restoredevice" "$restorepath"
-mount_device_at_path "$backupdevice" "$backuppath" "$dir"
+mount_device_at_path "$backupdevice" "$backuppath" "$backupdir"
 
 if [ -z $snapshotname ]; then
   select_snapshot
