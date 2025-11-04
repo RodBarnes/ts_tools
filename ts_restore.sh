@@ -108,8 +108,14 @@ function select_snapshot () {
 
   # Get the snapshots
   unset snapshots
-  while IFS= read -r LINE; do
-    snapshots+=("${LINE}")
+  while IFS= read -r backup; do
+    echo "path=$snapshotpath/$backup/$descfile" >&2
+    if [ -f "$snapshotpath/$backup/$descfile" ]; then
+      comment=$(cat "$snapshotpath/$backup/$descfile")
+    else
+      comment="<no desc>"
+    fi
+    snapshots+=("${backup}: $comment")
   done < <( find $snapshotpath -mindepth 1 -maxdepth 1 -type d | cut -d '/' -f5 )
 
   # Get the count of options and increment to include the cancel
@@ -125,7 +131,7 @@ function select_snapshot () {
           break
           ;;
         *)
-          snapshotname=$selection
+          snapshotname="${selection%%:*}"
           break
           ;;
       esac
