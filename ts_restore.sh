@@ -150,7 +150,7 @@ function get_bootfile {
       echo "SetupMode last byte: $setupmode" >> "/tmp/$outsecureboot"
     fi
   fi
-  output_file_list+="$outsecureboot "
+  g_output_file_list+="$outsecureboot "
 }
 
 function validate_boot_config {
@@ -193,6 +193,8 @@ function validate_boot_config {
       fi
     done
   fi
+
+  g_output_file_list+="$outbootvalidate "
 }
 
 function build_boot {
@@ -220,14 +222,14 @@ function build_boot {
   if [ $? -ne 0 ]; then
     printx "Something went wrong with 'update-grub'.  The details are in /tmp/$outgrubupdate."
   fi
-  output_file_list+="$outgrubupdate "
+  g_output_file_list+="$outgrubupdate "
 
   echo "Installing grub on $restoredevice..."
   sudo chroot "$restorepath" grub-install --target=x86_64-efi --efi-directory=/boot/efi --boot-directory=/boot &> "/tmp/$outgrubinstall"
   if [ $? -ne 0 ]; then
     printx "Something went wrong with 'grub-install'.  The details are in /tmp/$outgrubinstall."
   fi
-  output_file_list+="$outgrubinstall "
+  g_output_file_list+="$outgrubinstall "
 
   # Check for an existing boot entry
   osid=$(grep "^ID=" "$restorepath/etc/os-release" | cut -d'=' -f2 | tr -d '"')
@@ -248,7 +250,7 @@ function build_boot {
   else
     echo "Successfully copied $bootfile to EFI/BOOT/BOOTX64.EFI" >> "/tmp/$outefiboot"
   fi
-  output_file_list+="$outefiboot "
+  g_output_file_list+="$outefiboot "
 
   # Unbind the directories
   sudo umount "$restorepath/boot/efi" "$restorepath/dev/pts" "$restorepath/dev" "$restorepath/proc" "$restorepath/sys"
@@ -265,7 +267,7 @@ function restore_snapshot {
     printx "Something went wrong with the restore.  The details are in /tmp/$outrsync."
     exit 3
   fi
-  output_file_list+="$outrsync "
+  g_output_file_list+="$outrsync "
 
   if [ -f "$snapshotpath/$g_descfile" ]; then
     # Delete the description file from the target
@@ -288,6 +290,7 @@ function restore_dryrun {
 # --------------------
 
 g_descfile=comment.txt
+g_output_file_list=()
 backuppath="/mnt/backup"
 restorepath="/mnt/restore"
 snapshotpath="$backuppath/ts"
@@ -408,7 +411,7 @@ if [ ! -z $snapshotname ]; then
     # Done
     echo "✅ Restore complete: $snapshotpath/$snapshotname"
     echo "The system may now be rebooted into the restored partition."
-    echo "Details of the operation can be viewed in these files found in /tmp: $output_file_list"
+    echo "Details of the operation can be viewed in these files found in /tmp: $g_output_file_list"
   fi
 else
   echo "Operation cancelled."
