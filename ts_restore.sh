@@ -393,6 +393,7 @@ fi
 mount_device_at_path "$restoredevice" "$restorepath"
 mount_device_at_path "$backupdevice" "$backuppath" "$backupdir"
 
+# Since a snapshot was not specified, present a list for selection
 if [ -z $snapshotname ]; then
   snapshotname=$(select_snapshot "$backuppath/$backupdir")
 fi
