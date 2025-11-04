@@ -79,28 +79,22 @@ function list_snapshots () {
   fi
 }
 
-function parse_arguments () {
-  # Get the backup_device
-  i=0
-  if [[ "${args[$i]}" =~ "/dev/" ]]; then
-    backupdevice="${args[$i]}"
-  elif [[ "${args[$i]}" =~ $regex ]]; then
-    backupdevice="UUID=${args[$i]}"
+# Get the arguments
+if [ $# -ge 1 ]; then
+  arg="$1"
+  shift 1
+  if [[ "$arg" =~ "/dev/" ]]; then
+    backupdevice="$arg"
+  elif [[ "$arg" =~ $regex ]]; then
+    backupdevice="UUID=$arg"
   else
     # Assume it is a label
-    backupdevice="LABEL=${args[$i]}"
+    backupdevice="LABEL=$arg"
   fi
-
-  # echo "Device:$backupdevice"
-}
-
-args=("$@")
-argcnt=$#
-if [[ $argcnt < 1 ]]; then
-  show_syntax
+else
+  show_syntax >&2
+  exit 1
 fi
-
-parse_arguments
 
 if [[ "$EUID" != 0 ]]; then
   printx "This must be run as sudo.\n"

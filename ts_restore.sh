@@ -40,11 +40,11 @@ function readx {
 
 function show_syntax () {
   echo "Restore a snapshot created with ts_backup; emulates TimeShift."
-  echo "Syntax: $scriptname <backup_device> <restore_device> [-d] [-g <boot_device>] [-s snapshot]"
+  echo "Syntax: $scriptname <backup_device> <restore_device> [-d|--dry-run] [-g|--grub-install boot_device] [-s:snapshot snapshotname]"
   echo "Where:  <backup_device> and <restore_device> can be a device designator (e.g., /dev/sdb6), a UUID, or a filesystem LABEL."
-  echo "        [-d] means to do a 'dry-run' test without actually creating the backup."
-  echo "        [-g] means to rebuild grub on the specified device; e.g., /dev/sda1."
-  echo "        [snapshot] is the name (timestamp) of the snapshot to restore -- if not present, a selection is presented."
+  echo "        [-d|--dry-run] means to do a 'dry-run' test without actually creating the backup."
+  echo "        [-g--grub-install boot_device] means to rebuild grub on the specified device; e.g., /dev/sda1."
+  echo "        [-s|--snapshot snapshotname] is the name (timestamp) of the snapshot to restore -- if not present, a selection is presented."
   echo "NOTE:   Must be run as sudo."
   exit  
 }
@@ -287,57 +287,73 @@ function restore_dryrun () {
   echo "The dry run restore has completed.  The results are found in '$outrsync'."
 }
 
-function parse_arguments () {
-  # Get the backup_device
-  i=0
-  if [[ "${args[$i]}" =~ "/dev/" ]]; then
-    backupdevice="${args[$i]}"
-  elif [[ "${args[$i]}" =~ $regex ]]; then
-    backupdevice="UUID=${args[$i]}"
-  else
-    # Assume it is a label
-    backupdevice="LABEL=${args[$i]}"
-  fi
-
-  # Get the restore_device
-  i=1
-  if [[ "${args[$i]}" =~ "/dev/" ]]; then
-    restoredevice="${args[$i]}"
-  elif [[ "${args[$i]}" =~ $regex ]]; then
-    restoredevice="UUID=${args[$i]}"
-  else
-    # Assume it is a label
-    restoredevice="LABEL=${args[$i]}"
-  fi
-
-  # Get optional parameters
-  i=2
-  while [ $i -le $argcnt ]; do
-    if [ "${args[$i]}" == "-d" ]; then
-      dryrun=--dry-run
-    elif [ "${args[$i]}" == "-g" ]; then
-      ((i++))
-      bootdevice="${args[$i]}"
-    elif [ "${args[$i]}" == "-s" ]; then
-      ((i++))
-      snapshotname="${args[$i]}"
-    fi
-    ((i++))
-  done
-
-  # echo "Backup device:$backupdevice"
-  # echo "Restore device:$restoredevice"
-  # echo "Dry-run:$dryrun"
-  # echo "Boot device:$bootdevice"
-  # echo "Snapshot:$snapshotname"
-}
-
-args=("$@")
-argcnt=$#
-if [[ $argcnt < 2 ]]; then
+# Get the arguments
+arg_short=dg:s:
+arg_long=dry-run,grub-install:,snapshot:
+arg_opts=$(getopt --options "$arg_short" --long "$arg_long" --name "$0" -- "$@")
+if [ $? != 0 ]; then
   show_syntax
+  exit 1
 fi
-parse_arguments
+
+eval set -- "$arg_opts"
+while true; do
+  case "$1" in
+    -d|--dry-run)
+      dryrun=true
+      shift
+      ;;
+    -g|--grub-install)
+      bootdevice="$2"
+      shift 2
+      ;;
+    -s|--snapshot)
+      snapshotname="$2"
+      shift 2
+      ;;
+    --) # End of options
+      shift
+      break
+      ;;
+    *)
+      echo "Error parsing arguments: arg=$1"
+      exit 1
+      ;;
+  esac
+done
+
+if [ $# -ge 2 ]; then
+  arg="$1"
+  shift 1
+  if [[ "$arg" =~ "/dev/" ]]; then
+    backupdevice="$arg"
+  elif [[ "$arg" =~ $regex ]]; then
+    backupdevice="UUID=$arg"
+  else
+    # Assume it is a label
+    backupdevice="LABEL=$arg"
+  fi
+  arg="$1"
+  shift 1
+  if [[ "$arg" =~ "/dev/" ]]; then
+    restoredevice="$arg"
+  elif [[ "$arg" =~ $regex ]]; then
+    restoredevice="UUID=$arg"
+  else
+    # Assume it is a label
+    restoredevice="LABEL=$arg"
+  fi
+else
+  show_syntax >&2
+  exit 1
+fi
+
+# echo "Backup device:$backupdevice"
+# echo "Restore device:$restoredevice"
+# echo "Dry-run:$dryrun"
+# echo "Boot device:$bootdevice"
+# echo "Snapshot:$snapshotname"
+# exit
 
 if [[ "$EUID" != 0 ]]; then
   printx "This must be run as sudo.\n"

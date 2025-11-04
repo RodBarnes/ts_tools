@@ -23,10 +23,10 @@ function printx {
 
 function show_syntax () {
   echo "Create a TimeShift-like snapshot of the system file excluding those identified in /etc/backup-excludes."
-  echo "Syntax: $scriptname <backup_device> [-d] [-c comment]"
+  echo "Syntax: $scriptname <backup_device> [-d|--dry-run] [-c|--comment comment]"
   echo "Where:  <backup_device> can be a backupdevice designator (e.g., /dev/sdb6), a UUID, or a filesystem LABEL."
-  echo "        [-d] means to do a 'dry-run' test without actually restoring the snapshot."
-  echo "        [-c comment] is a quote-bounded comment for the snapshot"
+  echo "        [-d|--dry-run] means to do a 'dry-run' test without actually restoring the snapshot."
+  echo "        [-c|--comment comment] is a quote-bounded comment for the snapshot"
   echo "NOTE:   Must be run as sudo."
   exit
 }
@@ -109,42 +109,57 @@ function create_snapshot () {
   fi
 }
 
-function parse_arguments() {
-  # Get the backup_device
-  i=0
-  if [[ "${args[$i]}" =~ "/dev/" ]]; then
-    backupdevice="${args[$i]}"
-  elif [[ "${args[$i]}" =~ $regex ]]; then
-    backupdevice="UUID=${args[$i]}"
-  else
-    # Assume it is a label
-    backupdevice="LABEL=${args[$i]}"
-  fi
-
-  # Get optional parameters
-  i=1
-  while [ $i -lt $argcnt ]; do
-    if [ "${args[$i]}" == "-t" ]; then
-      dryrun=--dry-run
-    elif [ "${args[$i]}" == "-c" ]; then
-      ((i++))
-      description="${args[$i]}"
-    fi
-    ((i++))
-  done
-
-  # echo "Device:$backupdevice"
-  # echo "Dry-run:$dryrun"
-  # echo "Desc:$description"
-}
-
-args=("$@")
-argcnt=$#
-if [[ $argcnt < 1 ]]; then
+# Get the arguments
+arg_short=dc:
+arg_long=dry-run,comment:
+arg_opts=$(getopt --options "$arg_short" --long "$arg_long" --name "$0" -- "$@")
+if [ $? != 0 ]; then
   show_syntax
+  exit 1
 fi
 
-parse_arguments
+eval set -- "$arg_opts"
+while true; do
+  case "$1" in
+    -d|--dry-run)
+      dryrun=true
+      shift
+      ;;
+    -c|--comment)
+      description="$2"
+      shift 2
+      ;;
+    --) # End of options
+      shift
+      break
+      ;;
+    *)
+      echo "Error parsing arguments: arg=$1"
+      exit 1
+      ;;
+  esac
+done
+
+if [ $# -ge 1 ]; then
+  arg="$1"
+  shift 1
+  if [[ "$arg" =~ "/dev/" ]]; then
+    backupdevice="$arg"
+  elif [[ "$arg" =~ $regex ]]; then
+    backupdevice="UUID=$arg"
+  else
+    # Assume it is a label
+    backupdevice="LABEL=$arg"
+  fi
+else
+  show_syntax >&2
+  exit 1
+fi
+
+# echo "Device:$backupdevice"
+# echo "Dry-run:$dryrun"
+# echo "Desc:$description"
+# exit
 
 # Confirm running as sudo
 if [[ "$EUID" != 0 ]]; then
