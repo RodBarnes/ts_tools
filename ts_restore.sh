@@ -266,10 +266,11 @@ function restore_snapshot {
   local backpath=$1 name=$2 restpath=$3
 
   local outrsync="ts_rsync.out"
+  local excludespathname="/etc/ts_excludes"
 
   # Restore the snapshot
-  echo rsync -aAX --delete --verbose "--exclude-from=$g_excludespathname" "$backpath/$name/" "$restpath/" > "/tmp/$outrsync"
-  sudo rsync -aAX --delete --verbose "--exclude-from=$g_excludespathname" "$backpath/$name/" "$restpath/" >> "/tmp/$outrsync"
+  echo rsync -aAX --delete --verbose "--exclude-from=$excludespathname" "$backpath/$name/" "$restpath/" > "/tmp/$outrsync"
+  sudo rsync -aAX --delete --verbose "--exclude-from=$excludespathname" "$backpath/$name/" "$restpath/" >> "/tmp/$outrsync"
   if [ $? -ne 0 ]; then
     printx "Something went wrong with the restore.  The details are in /tmp/$outrsync." >&2
     exit 3
@@ -287,10 +288,11 @@ function dryrun_snapshot {
   local backpath=$1 name=$2 restpath=$3
 
   local outrsync="ts_rsync.out"
+  local excludespathname="/etc/ts_excludes"
 
   # Do a dry run and record the output
-  echo rsync -aAX --dry-run --delete --verbose "--exclude-from=$g_excludespathname" "$backpath/$name/" "$restpath/" > "/tmp/$outrsync"
-  sudo rsync -aAX --dry-run --delete --verbose "--exclude-from=$g_excludespathname" "$backpath/$name/" "$restpath/" >> "/tmp/$outrsync"
+  echo rsync -aAX --dry-run --delete --verbose "--exclude-from=$excludespathname" "$backpath/$name/" "$restpath/" > "/tmp/$outrsync"
+  sudo rsync -aAX --dry-run --delete --verbose "--exclude-from=$excludespathname" "$backpath/$name/" "$restpath/" >> "/tmp/$outrsync"
 
   g_output_file_list+="$outrsync "
 }
@@ -300,7 +302,6 @@ function dryrun_snapshot {
 # --------------------
 
 g_descfile=comment.txt
-g_excludespathname="/etc/ts_excludes"
 g_output_file_list=()
 backuppath="/mnt/backup"
 backupdir="ts"
