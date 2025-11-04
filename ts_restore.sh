@@ -271,18 +271,19 @@ function restore_snapshot {
   echo rsync -aAX --delete --verbose "--exclude-from=$g_excludespathname" "$backpath/$name/" "$restpath/" > "/tmp/$outrsync"
   sudo rsync -aAX --delete --verbose "--exclude-from=$g_excludespathname" "$backpath/$name/" "$restpath/" >> "/tmp/$outrsync"
   if [ $? -ne 0 ]; then
-    printx "Something went wrong with the restore.  The details are in /tmp/$outrsync."
+    printx "Something went wrong with the restore.  The details are in /tmp/$outrsync." >&2
     exit 3
   fi
-  g_output_file_list+="$outrsync "
 
   if [ -f "$backpath/$g_descfile" ]; then
     # Delete the description file from the target
     sudo rm "$backpath/$g_descfile"
   fi
+
+  g_output_file_list+="$outrsync "
 }
 
-function restore_dryrun {
+function dryrun_snapshot {
   local backpath=$1 name=$2 restpath=$3
 
   local outrsync="ts_rsync.out"
@@ -290,7 +291,8 @@ function restore_dryrun {
   # Do a dry run and record the output
   echo rsync -aAX --dry-run --delete --verbose "--exclude-from=$g_excludespathname" "$backpath/$name/" "$restpath/" > "/tmp/$outrsync"
   sudo rsync -aAX --dry-run --delete --verbose "--exclude-from=$g_excludespathname" "$backpath/$name/" "$restpath/" >> "/tmp/$outrsync"
-  echo "The dry run restore has completed.  The results are found in '$outrsync'."
+
+  g_output_file_list+="$outrsync "
 }
 
 # --------------------
@@ -395,55 +397,55 @@ if [ -z $snapshotname ]; then
 fi
 
 if [ ! -z $snapshotname ]; then
-  if [ ! -z $dryrun ]; then
-    restore_dryrun "$backuppath/$backupdir" "$snapshotname" "$restorepath"
-  else
+  if [ -z $dryrun ]; then
     printx "This will completely OVERWRITE the operating system on '$restoredevice'."
     readx "Are you sure you want to proceed? (y/N) " yn
     if [[ $yn != "y" && $yn != "Y" ]]; then
       echo "Operation cancelled."
       exit
-    else
-      restore_snapshot "$backuppath/$backupdir" "$snapshotname" "$restorepath"
-      echo "The snapshot '$snapshotname' was successfully restored."
     fi
+    echo "Restoring '$snapshotname' to '$restoredevice'..."
+    restore_snapshot "$backuppath/$backupdir" "$snapshotname" "$restorepath"
 
-    echo "Before get_bootfile..."
-    echo "restoredevice=$restoredevice"
-    echo "g_bootfile=$g_bootfile"
-    echo "bootdevice=$bootdevice"
-    echo
+    # echo "Before get_bootfile..."
+    # echo "restoredevice=$restoredevice"
+    # echo "g_bootfile=$g_bootfile"
+    # echo "bootdevice=$bootdevice"
+    # echo
     get_bootfile "$restorepath"
 
     if [ -z $bootdevice ]; then
-      echo "Before validate_boot_config..."
-      echo "restoredevice=$restoredevice"
-      echo "g_bootfile=$g_bootfile"
-      echo "bootdevice=$bootdevice"
-      echo
+      # echo "Before validate_boot_config..."
+      # echo "restoredevice=$restoredevice"
+      # echo "g_bootfile=$g_bootfile"
+      # echo "bootdevice=$bootdevice"
+      # echo
       validate_boot_config "$restoredevice" "$restorepath"
     fi
 
     if [ ! -z $bootdevice ]; then
-      echo "Before get_build_boot..."
-      echo "restoredevice=$restoredevice"
-      echo "g_bootfile=$g_bootfile"
-      echo "bootdevice=$bootdevice"
-      echo
+      # echo "Before get_build_boot..."
+      # echo "restoredevice=$restoredevice"
+      # echo "g_bootfile=$g_bootfile"
+      # echo "bootdevice=$bootdevice"
+      # echo
       build_boot "$restoredevice" "$restorepath"
     fi
 
-    echo "After all boot stuff..."
-    echo "restoredevice=$restoredevice"
-    echo "g_bootfile=$g_bootfile"
-    echo "bootdevice=$bootdevice"
-    echo
+    # echo "After all boot stuff..."
+    # echo "restoredevice=$restoredevice"
+    # echo "g_bootfile=$g_bootfile"
+    # echo "bootdevice=$bootdevice"
+    # echo
 
     # Done
-    echo "✅ Restore complete: $$backuppath/$backupdir/$snapshotname"
+    echo "✅ Restore complete: $backuppath/$backupdir/$snapshotname"
     echo "The system may now be rebooted into the restored partition."
-    echo "Details of the operation can be viewed in these files found in /tmp: $g_output_file_list"
+  else
+    echo "Performing dry-run restore of '$snapshotname' to '$restoredevice'..."
+    dryrun_snapshot "$backuppath/$backupdir" "$snapshotname" "$restorepath"
   fi
+  echo "Details of the operation can be viewed in these files found in /tmp: $g_output_file_list"
 else
   echo "Operation cancelled."
 fi
