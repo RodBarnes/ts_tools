@@ -278,6 +278,12 @@ function restore_dryrun {
   echo "The dry run restore has completed.  The results are found in '$outrsync'."
 }
 
+# --------------------
+# ------- MAIN -------
+# --------------------
+
+trap 'unmount_device_at_path "$backuppath"; unmount_device_at_path "$restorepath"' EXIT
+
 # Get the arguments
 arg_short=dg:s:
 arg_long=dry-run,grub-install:,snapshot:
@@ -355,12 +361,6 @@ if [ ! -e $restoredevice ]; then
   printx "There is no such device: $restoredevice."
   exit 2
 fi
-
-# --------------------
-# ------- MAIN -------
-# --------------------
-
-trap 'unmount_device_at_path "$backuppath"; unmount_device_at_path "$restorepath"' EXIT
 
 mount_device_at_path "$restoredevice" "$restorepath"
 mount_device_at_path "$backupdevice" "$backuppath"
