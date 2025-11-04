@@ -82,9 +82,9 @@ function select_snapshot {
   # Get the snapshots
   unset snapshots
   while IFS= read -r backup; do
-    echo "path=$snapshotpath/$backup/$descfile" >&2
-    if [ -f "$snapshotpath/$backup/$descfile" ]; then
-      comment=$(cat "$snapshotpath/$backup/$descfile")
+    echo "path=$snapshotpath/$backup/$g_descfile" >&2
+    if [ -f "$snapshotpath/$backup/$g_descfile" ]; then
+      comment=$(cat "$snapshotpath/$backup/$g_descfile")
     else
       comment="<no desc>"
     fi
@@ -115,6 +115,9 @@ function select_snapshot {
 }
 
 function get_bootfile {
+
+  local outsecureboot="ts_secureboot.out"
+
   # Check Secure Boot status
   bootfile="grubx64.efi"  # Default for non-secure boot
   securebootvar="/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c"
@@ -151,6 +154,9 @@ function get_bootfile {
 }
 
 function validate_boot_config {
+
+  local outbootvalidate="ts_boot_validation.out"
+
   # Boot build was not requested so validate restored boot components
   # To see if it should be done anyway...
   echo "Validating restored boot components..."
@@ -190,6 +196,11 @@ function validate_boot_config {
 }
 
 function build_boot {
+
+  local outgrubinstall="ts_grub-install.out"
+  local outgrubupdate="ts_update-grub.out"
+  local outefiboot="ts_efibootmgr.out"
+
   # Mount the necessary directories
   sudo mount $bootdevice "$restorepath/boot/efi"
   if [ $? -ne 0 ]; then
@@ -244,6 +255,9 @@ function build_boot {
 }
 
 function restore_snapshot {
+
+  local outrsync="ts_rsync.out"
+
   # Restore the snapshot
   echo rsync -aAX --delete --verbose "--exclude-from=$excludespathname" "$snapshotpath/$snapshotname/" "$restorepath/" > "/tmp/$outrsync"
   sudo rsync -aAX --delete --verbose "--exclude-from=$excludespathname" "$snapshotpath/$snapshotname/" "$restorepath/" >> "/tmp/$outrsync"
@@ -253,13 +267,16 @@ function restore_snapshot {
   fi
   output_file_list+="$outrsync "
 
-  if [ -f "$snapshotpath/$descfile" ]; then
+  if [ -f "$snapshotpath/$g_descfile" ]; then
     # Delete the description file from the target
-    sudo rm "$snapshotpath/$descfile"
+    sudo rm "$snapshotpath/$g_descfile"
   fi
 }
 
 function restore_dryrun {
+
+  local outrsync="ts_rsync.out"
+
   # Do a dry run and record the output
   echo rsync -aAX --dry-run --delete --verbose "--exclude-from=$excludespathname" "$snapshotpath/$snapshotname/" "$restorepath/" > "/tmp/$outrsync"
   sudo rsync -aAX --dry-run --delete --verbose "--exclude-from=$excludespathname" "$snapshotpath/$snapshotname/" "$restorepath/" >> "/tmp/$outrsync"
@@ -270,17 +287,11 @@ function restore_dryrun {
 # ------- MAIN -------
 # --------------------
 
-backuppath=/mnt/backup
-restorepath=/mnt/restore
-snapshotpath=$backuppath/ts
-excludespathname=/etc/ts_excludes
-descfile=comment.txt
-outrsync=ts_rsync.out
-outgrubinstall=ts_grub-install.out
-outgrubupdate=ts_update-grub.out
-outsecureboot=ts_secureboot.out
-outefiboot=ts_efibootmgr.out
-outbootvalidate=ts_boot_validation.out
+g_descfile=comment.txt
+backuppath="/mnt/backup"
+restorepath="/mnt/restore"
+snapshotpath="$backuppath/ts"
+excludespathname="/etc/ts_excludes"
 regex="^\S{8}-\S{4}-\S{4}-\S{4}-\S{12}$"
 
 trap 'unmount_device_at_path "$backuppath"; unmount_device_at_path "$restorepath"' EXIT
