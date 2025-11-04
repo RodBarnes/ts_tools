@@ -6,7 +6,6 @@
 
 source /usr/local/lib/colors
 
-scriptname=$(basename $0)
 backuppath=/mnt/backup
 snapshotpath=$backuppath/ts
 snapshotname=$(date +%Y-%m-%d-%H%M%S)
@@ -20,7 +19,7 @@ function printx {
 
 function show_syntax {
   echo "Create a TimeShift-like snapshot of the system file excluding those identified in /etc/backup-excludes."
-  echo "Syntax: $scriptname <backup_device> [-d|--dry-run] [-c|--comment comment]"
+  echo "Syntax: $(basename $0) <backup_device> [-d|--dry-run] [-c|--comment comment]"
   echo "Where:  <backup_device> can be a backupdevice designator (e.g., /dev/sdb6), a UUID, or a filesystem LABEL."
   echo "        [-d|--dry-run] means to do a 'dry-run' test without actually restoring the snapshot."
   echo "        [-c|--comment comment] is a quote-bounded comment for the snapshot"

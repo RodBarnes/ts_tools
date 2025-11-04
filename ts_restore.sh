@@ -15,7 +15,6 @@
 
 source /usr/local/lib/colors
 
-scriptname=$(basename $0)
 backuppath=/mnt/backup
 restorepath=/mnt/restore
 snapshotpath=$backuppath/ts
@@ -40,7 +39,7 @@ function readx {
 
 function show_syntax {
   echo "Restore a snapshot created with ts_backup; emulates TimeShift."
-  echo "Syntax: $scriptname <backup_device> <restore_device> [-d|--dry-run] [-g|--grub-install boot_device] [-s:snapshot snapshotname]"
+  echo "Syntax: $(basename $0) <backup_device> <restore_device> [-d|--dry-run] [-g|--grub-install boot_device] [-s:snapshot snapshotname]"
   echo "Where:  <backup_device> and <restore_device> can be a device designator (e.g., /dev/sdb6), a UUID, or a filesystem LABEL."
   echo "        [-d|--dry-run] means to do a 'dry-run' test without actually creating the backup."
   echo "        [-g--grub-install boot_device] means to rebuild grub on the specified device; e.g., /dev/sda1."
