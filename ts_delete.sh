@@ -53,13 +53,16 @@ function mount_device_at_path {
   fi
 }
 
-
 function unmount_device_at_path {
   local mount=$1
 
   # Unmount if mounted
   if [ -d "$mount/fs" ]; then
-    sudo umount $mount
+    sudo umount $mount &> /dev/null
+    if [ $? -ne 0 ]; then
+      printx "Unable to locate or unmount '$mount'." >&2
+      exit 2
+    fi
   fi
 }
 
