@@ -78,11 +78,11 @@ function list_snapshots {
   done < <( find $path -mindepth 1 -maxdepth 1 -type d | sort -r | cut -d '/' -f5 )
 
   if [ ${#snapshots[@]} -eq 0 ]; then
-    printx "There are no backups on $device"
+    printx "There are no backups on $device" >&2
   else
-    printx "Snapshot files on $device"
+    printx "Snapshot files on $device" >&2
     for snapshot in "${snapshots[@]}"; do
-      printf "$snapshot\n"
+      printf "$snapshot\n" >&2
     done
   fi
 }
