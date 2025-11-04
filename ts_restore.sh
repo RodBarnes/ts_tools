@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 
 # Restore a backup using rsync command as done by TimeShift.
-# One of the followin is required parameter: <device>, <label>, or <uuid> for mounting the device
-# Optional parameter: -t -- Include to do a dry-run
 
 # Error codes:
 # 1 -- not running as sudo
@@ -285,6 +283,19 @@ function restore_dryrun {
 # ------- MAIN -------
 # --------------------
 
+backuppath=/mnt/backup
+restorepath=/mnt/restore
+snapshotpath=$backuppath/ts
+excludespathname=/etc/ts_excludes
+descfile=comment.txt
+outrsync=ts_rsync.out
+outgrubinstall=ts_grub-install.out
+outgrubupdate=ts_update-grub.out
+outsecureboot=ts_secureboot.out
+outefiboot=ts_efibootmgr.out
+outbootvalidate=ts_boot_validation.out
+regex="^\S{8}-\S{4}-\S{4}-\S{4}-\S{12}$"
+
 trap 'unmount_device_at_path "$backuppath"; unmount_device_at_path "$restorepath"' EXIT
 
 # Get the arguments
@@ -380,8 +391,6 @@ if [ ! -z $snapshotname ]; then
     readx "Are you sure you want to proceed? (y/N) " yn
     if [[ $yn != "y" && $yn != "Y" ]]; then
       echo "Operation cancelled."
-      unmount_backup_device
-      unmount_restore_device
       exit
     else
       restore_snapshot
@@ -399,11 +408,10 @@ if [ ! -z $snapshotname ]; then
     fi
 
     # Done
+    echo "✅ Restore complete: $snapshotpath/$snapshotname"
     echo "The system may now be rebooted into the restored partition."
     echo "Details of the operation can be viewed in these files found in /tmp: $output_file_list"
   fi
 else
-  echo "No snapshot was identified."
+  echo "Operation cancelled."
 fi
-
-echo "✅ Restore complete: $snapshotpath/$snapshotname"
