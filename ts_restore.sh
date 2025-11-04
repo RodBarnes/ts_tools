@@ -115,6 +115,7 @@ function select_snapshot {
 }
 
 function get_bootfile {
+  local restpath=$1
 
   local outsecureboot="ts_secureboot.out"
 
@@ -134,7 +135,7 @@ function get_bootfile {
     fi
     if [ "$securebootval" = "01" ]; then
       # Secure Boot enabled; use shimx64.efi if present
-      if [ -f "$restorepath/boot/efi/EFI/debian/shimx64.efi" ]; then
+      if [ -f "$restpath/boot/efi/EFI/debian/shimx64.efi" ]; then
         bootfile="shimx64.efi"
         echo "SecureBoot enabled (EFI variable: $securebootval); using $bootfile." >> "/tmp/$outsecureboot"
       else
@@ -154,6 +155,7 @@ function get_bootfile {
 }
 
 function validate_boot_config {
+  local restpath=$1
 
   local outbootvalidate="ts_boot_validation.out"
 
@@ -161,20 +163,20 @@ function validate_boot_config {
   # To see if it should be done anyway...
   echo "Validating restored boot components..."
   boot_valid=1
-  if [ ! -f "$restorepath/boot/grub/grub.cfg" ]; then
-    echo "Warning: $restorepath/boot/grub/grub.cfg not found" > "/tmp/$outbootvalidate"
+  if [ ! -f "$restpath/boot/grub/grub.cfg" ]; then
+    echo "Warning: $restpath/boot/grub/grub.cfg not found" > "/tmp/$outbootvalidate"
     boot_valid=0
   fi
-  if [ ! -d "$restorepath/boot/grub" ]; then
-    echo "Warning: $restorepath/boot/grub directory not found" >> "/tmp/$outbootvalidate"
+  if [ ! -d "$restpath/boot/grub" ]; then
+    echo "Warning: $restpath/boot/grub directory not found" >> "/tmp/$outbootvalidate"
     boot_valid=0
   fi
-  if [ -z "$(ls $restorepath/boot/vmlinuz* 2>/dev/null)" ]; then
-    echo "Warning: No kernel images found in $restorepath/boot/vmlinuz*" >> "/tmp/$outbootvalidate"
+  if [ -z "$(ls $restpath/boot/vmlinuz* 2>/dev/null)" ]; then
+    echo "Warning: No kernel images found in $restpath/boot/vmlinuz*" >> "/tmp/$outbootvalidate"
     boot_valid=0
   fi
-  if [ ! -f "$restorepath/boot/efi/EFI/debian/$bootfile" ]; then
-    echo "Warning: Bootloader file $restorepath/boot/efi/EFI/debian/$bootfile not found" >> "/tmp/$outbootvalidate"
+  if [ ! -f "$restpath/boot/efi/EFI/debian/$bootfile" ]; then
+    echo "Warning: Bootloader file $restpath/boot/efi/EFI/debian/$bootfile not found" >> "/tmp/$outbootvalidate"
     boot_valid=0
   fi
   if [ $boot_valid -eq 0 ]; then
@@ -198,41 +200,42 @@ function validate_boot_config {
 }
 
 function build_boot {
+  local restpath=$1
 
   local outgrubinstall="ts_grub-install.out"
   local outgrubupdate="ts_update-grub.out"
   local outefiboot="ts_efibootmgr.out"
 
   # Mount the necessary directories
-  sudo mount $bootdevice "$restorepath/boot/efi"
+  sudo mount $bootdevice "$restpath/boot/efi"
   if [ $? -ne 0 ]; then
     printx "Unable to mount the EFI System Partition on $bootdevice."
     unmount_backup_device
     unmount_restore_device
     exit 2
   fi
-  sudo mount --bind /dev "$restorepath/dev"
-  sudo mount --bind /proc "$restorepath/proc"
-  sudo mount --bind /sys "$restorepath/sys"
-  sudo mount --bind /dev/pts "$restorepath/dev/pts"
+  sudo mount --bind /dev "$restpath/dev"
+  sudo mount --bind /proc "$restpath/proc"
+  sudo mount --bind /sys "$restpath/sys"
+  sudo mount --bind /dev/pts "$restpath/dev/pts"
 
   echo "Updating grub on $restoredevice..."
   # Use chroot to rebuild grub on the restored partion
-  sudo chroot "$restorepath" update-grub &> "/tmp/$outgrubupdate"
+  sudo chroot "$restpath" update-grub &> "/tmp/$outgrubupdate"
   if [ $? -ne 0 ]; then
     printx "Something went wrong with 'update-grub'.  The details are in /tmp/$outgrubupdate."
   fi
   g_output_file_list+="$outgrubupdate "
 
   echo "Installing grub on $restoredevice..."
-  sudo chroot "$restorepath" grub-install --target=x86_64-efi --efi-directory=/boot/efi --boot-directory=/boot &> "/tmp/$outgrubinstall"
+  sudo chroot "$restpath" grub-install --target=x86_64-efi --efi-directory=/boot/efi --boot-directory=/boot &> "/tmp/$outgrubinstall"
   if [ $? -ne 0 ]; then
     printx "Something went wrong with 'grub-install'.  The details are in /tmp/$outgrubinstall."
   fi
   g_output_file_list+="$outgrubinstall "
 
   # Check for an existing boot entry
-  osid=$(grep "^ID=" "$restorepath/etc/os-release" | cut -d'=' -f2 | tr -d '"')
+  osid=$(grep "^ID=" "$restpath/etc/os-release" | cut -d'=' -f2 | tr -d '"')
   if ! sudo efibootmgr | grep -q "$osid"; then
     echo "Building the UEFI boot entry on $bootdevice with an entry for $restoredevice..."
 
@@ -244,7 +247,7 @@ function build_boot {
     fi
   fi
   # Copy bootloader to default EFI path as a fall back
-  sudo cp "$restorepath/boot/efi/EFI/$osid/$bootfile" "$restorepath/boot/efi/EFI/BOOT/BOOTX64.EFI"
+  sudo cp "$restpath/boot/efi/EFI/$osid/$bootfile" "$restpath/boot/efi/EFI/BOOT/BOOTX64.EFI"
   if [ $? -ne 0 ]; then
     echo "Warning: Failed to copy $bootfile to EFI/BOOT/BOOTX64.EFI" >> "/tmp/$outefiboot"
   else
@@ -253,16 +256,17 @@ function build_boot {
   g_output_file_list+="$outefiboot "
 
   # Unbind the directories
-  sudo umount "$restorepath/boot/efi" "$restorepath/dev/pts" "$restorepath/dev" "$restorepath/proc" "$restorepath/sys"
+  sudo umount "$restpath/boot/efi" "$restpath/dev/pts" "$restpath/dev" "$restpath/proc" "$restpath/sys"
 }
 
 function restore_snapshot {
+  local restpath=$1
 
   local outrsync="ts_rsync.out"
 
   # Restore the snapshot
-  echo rsync -aAX --delete --verbose "--exclude-from=$excludespathname" "$snapshotpath/$snapshotname/" "$restorepath/" > "/tmp/$outrsync"
-  sudo rsync -aAX --delete --verbose "--exclude-from=$excludespathname" "$snapshotpath/$snapshotname/" "$restorepath/" >> "/tmp/$outrsync"
+  echo rsync -aAX --delete --verbose "--exclude-from=$excludespathname" "$snapshotpath/$snapshotname/" "$restpath/" > "/tmp/$outrsync"
+  sudo rsync -aAX --delete --verbose "--exclude-from=$excludespathname" "$snapshotpath/$snapshotname/" "$restpath/" >> "/tmp/$outrsync"
   if [ $? -ne 0 ]; then
     printx "Something went wrong with the restore.  The details are in /tmp/$outrsync."
     exit 3
@@ -276,12 +280,13 @@ function restore_snapshot {
 }
 
 function restore_dryrun {
+  local restpath=$1
 
   local outrsync="ts_rsync.out"
 
   # Do a dry run and record the output
-  echo rsync -aAX --dry-run --delete --verbose "--exclude-from=$excludespathname" "$snapshotpath/$snapshotname/" "$restorepath/" > "/tmp/$outrsync"
-  sudo rsync -aAX --dry-run --delete --verbose "--exclude-from=$excludespathname" "$snapshotpath/$snapshotname/" "$restorepath/" >> "/tmp/$outrsync"
+  echo rsync -aAX --dry-run --delete --verbose "--exclude-from=$excludespathname" "$snapshotpath/$snapshotname/" "$restpath/" > "/tmp/$outrsync"
+  sudo rsync -aAX --dry-run --delete --verbose "--exclude-from=$excludespathname" "$snapshotpath/$snapshotname/" "$restpath/" >> "/tmp/$outrsync"
   echo "The dry run restore has completed.  The results are found in '$outrsync'."
 }
 
@@ -386,7 +391,7 @@ fi
 
 if [ ! -z $snapshotname ]; then
   if [ ! -z $dryrun ]; then
-    restore_dryrun
+    restore_dryrun "$restorepath"
   else
     printx "This will completely OVERWRITE the operating system on '$restoredevice'."
     readx "Are you sure you want to proceed? (y/N) " yn
@@ -394,18 +399,18 @@ if [ ! -z $snapshotname ]; then
       echo "Operation cancelled."
       exit
     else
-      restore_snapshot
+      restore_snapshot "$restorepath"
       echo "The snapshot '$snapshotname' was successfully restored."
     fi
 
-    get_bootfile
+    get_bootfile "$restorepath"
 
     if [ -z $bootdevice ]; then
-      validate_boot_config
+      validate_boot_config "$restorepath"
     fi
 
     if [ ! -z $bootdevice ]; then
-      build_boot
+      build_boot "$restorepath"
     fi
 
     # Done
