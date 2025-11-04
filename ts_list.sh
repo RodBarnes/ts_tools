@@ -64,22 +64,25 @@ function unmount_device_at_path {
 }
 
 function list_snapshots {
+  local device=$1 path=$2
+
   # Get the snapshots
-  unset snapshots
-  while IFS= read -r LINE; do
-    snapshot=("${LINE}")
-    if [ -f "$snapshotpath/$snapshot/$descfile" ]; then
-      description="$(cat $snapshotpath/$snapshot/$descfile)"
+  local snapshots=() note name
+
+  while IFS= read -r dirname; do
+    name=("${dirname}")
+    if [ -f "$path/$name/$descfile" ]; then
+      note="$(cat $path/$name/$descfile)"
     else
-      description="<no desc>"
+      note="<no desc>"
     fi
-    snapshots+=("$snapshot: $description")
-  done < <( find $snapshotpath -mindepth 1 -maxdepth 1 -type d | sort -r | cut -d '/' -f5 )
+    snapshots+=("$name: $note")
+  done < <( find $path -mindepth 1 -maxdepth 1 -type d | sort -r | cut -d '/' -f5 )
 
   if [ ${#snapshots[@]} -eq 0 ]; then
-    printx "There are no backups on $backupdevice"
+    printx "There are no backups on $device"
   else
-    printx "Snapshot files on $backupdevice"
+    printx "Snapshot files on $device"
     for snapshot in "${snapshots[@]}"; do
       printf "$snapshot\n"
     done
@@ -115,4 +118,4 @@ if [[ "$EUID" != 0 ]]; then
 fi
 
 mount_device_at_path "$backupdevice" "$backuppath"
-list_snapshots
+list_snapshots "$backupdevice" "$snapshotpath"

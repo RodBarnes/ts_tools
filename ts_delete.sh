@@ -69,22 +69,25 @@ function unmount_device_at_path {
 }
 
 function select_snapshot {
+  local device=$1 path=$2
   # Get the snapshots
-  unset snapshots
-  while IFS= read -r LINE; do
-    snapshot=("${LINE}")
-    if [ -f "$snapshotpath/$snapshot/$descfile" ]; then
-      description="$(cat $snapshotpath/$snapshot/$descfile)"
+  
+  local snapshots=() name note count selected
+
+  while IFS= read -r dirname; do
+    name=("${dirname}")
+    if [ -f "$path/$name/$descfile" ]; then
+      note="$(cat $path/$name/$descfile)"
     else
-      description="<no desc>"
+      note="<no desc>"
     fi
-    snapshots+=("$snapshot: $description")
-  done < <(find $snapshotpath -mindepth 1 -maxdepth 1 -type d | sort -r | cut -d '/' -f5)
+    snapshots+=("$name: $note")
+  done < <(find $path -mindepth 1 -maxdepth 1 -type d | sort -r | cut -d '/' -f5)
 
   if [ ${#snapshots[@]} -eq 0 ]; then
-    printx "There are no backups on $backupdevice"
+    printx "There are no backups on $device" >&2
   else
-    printx "Snapshot files on $backupdevice"
+    printx "Snapshot files on $device" >&2
     # Get the count of options and increment to include the cancel
     count="${#snapshots[@]}"
     ((count++))
@@ -95,20 +98,45 @@ function select_snapshot {
         case ${selection} in
           "Cancel")
             # If the user decides to cancel...
-            echo "Operation cancelled."
+            echo "Operation cancelled." >&2
             break
             ;;
           *)
-            snapshotname=$(echo $selection | cut -d ':' -f1)
+            selected=$(echo $selection | cut -d ':' -f1)
             break
             ;;
         esac
       else
-        printx "Invalid selection. Please enter a number between 1 and $count."
+        printx "Invalid selection. Please enter a number between 1 and $count." >&2
       fi
     done
   fi
 
+  echo $selected
+}
+
+function delete_snapshot {
+  local path=$1 name=$2
+
+  local dircnt latest
+
+  printx "This will completely DELETE the snapshot '$name' and is not recoverable." >&2
+  readx "Are you sure you want to proceed? (y/N) " yn
+  if [[ $yn != "y" && $yn != "Y" ]]; then
+    echo "Operation cancelled." >&2
+  else
+    sudo rm -Rf $path/$name
+    echo "'$name' has been deleted." >&2
+    dircnt=$(find "$path" -mindepth 1 -type d | wc -l)
+    if [[ $dircnt > 0 ]]; then
+      # There are still backups so fix the link to latest
+      latest=$(find "$path" -maxdepth 1 -type d -regextype posix-extended -regex '.*/[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{6}' | while read -r dir; do basename "$dir"; done | sort -r | head -n 1)
+      ln -sfn $latest $path/latest
+    else
+      sudo rm $path/latest
+    fi
+  fi
+}
 
 # --------------------
 # ------- MAIN -------
@@ -139,23 +167,8 @@ if [[ "$EUID" != 0 ]]; then
 fi
 
 mount_device_at_path "$backupdevice" "$backuppath"
-select_snapshot
+snapshotname=$(select_snapshot "$backupdevice" "$snapshotpath")
 
 if [ ! -z $snapshotname ]; then
-  printx "This will completely DELETE the snapshot '$snapshotname' and is not recoverable."
-  readx "Are you sure you want to proceed? (y/N) " yn
-  if [[ $yn != "y" && $yn != "Y" ]]; then
-    echo "Operation cancelled."
-  else
-    sudo rm -Rf $snapshotpath/$snapshotname
-    echo "'$snapshotname' has been deleted."
-    dircnt=$(find "$snapshotpath" -mindepth 1 -type d | wc -l)
-    if [[ $dircnt > 0 ]]; then
-      # There are still backups so fix the link to latest
-      latest=$(find "$snapshotpath" -maxdepth 1 -type d -regextype posix-extended -regex '.*/[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{6}' | while read -r dir; do basename "$dir"; done | sort -r | head -n 1)
-      ln -sfn $latest $snapshotpath/latest
-    else
-      sudo rm $snapshotpath/latest
-    fi
-  fi
+  delete_snapshot "$snapshotpath" "$snapshotname"
 fi
