@@ -76,20 +76,22 @@ function unmount_device_at_path {
 }
 
 function select_snapshot {
+  local path=$1
+
   # Get the snapshots and allow selecting
   echo "Listing backup files..."
 
   # Get the snapshots
   unset snapshots
   while IFS= read -r backup; do
-    echo "path=$g_snapshotpath/$backup/$g_descfile" >&2
-    if [ -f "$g_snapshotpath/$backup/$g_descfile" ]; then
-      comment=$(cat "$g_snapshotpath/$backup/$g_descfile")
+    echo "path=$path/$backup/$g_descfile" >&2
+    if [ -f "$path/$backup/$g_descfile" ]; then
+      comment=$(cat "$path/$backup/$g_descfile")
     else
       comment="<no desc>"
     fi
     snapshots+=("${backup}: $comment")
-  done < <( find $g_snapshotpath -mindepth 1 -maxdepth 1 -type d | cut -d '/' -f5 )
+  done < <( find $path -mindepth 1 -maxdepth 1 -type d | cut -d '/' -f5 )
 
   # Get the count of options and increment to include the cancel
   count="${#snapshots[@]}"
@@ -261,33 +263,33 @@ function build_boot {
 }
 
 function restore_snapshot {
-  local restpath=$1
+  local backpath=$1 name=$2 restpath=$3
 
   local outrsync="ts_rsync.out"
 
   # Restore the snapshot
-  echo rsync -aAX --delete --verbose "--exclude-from=$g_excludespathname" "$g_snapshotpath/$snapshotname/" "$restpath/" > "/tmp/$outrsync"
-  sudo rsync -aAX --delete --verbose "--exclude-from=$g_excludespathname" "$g_snapshotpath/$snapshotname/" "$restpath/" >> "/tmp/$outrsync"
+  echo rsync -aAX --delete --verbose "--exclude-from=$g_excludespathname" "$backpath/$name/" "$restpath/" > "/tmp/$outrsync"
+  sudo rsync -aAX --delete --verbose "--exclude-from=$g_excludespathname" "$backpath/$name/" "$restpath/" >> "/tmp/$outrsync"
   if [ $? -ne 0 ]; then
     printx "Something went wrong with the restore.  The details are in /tmp/$outrsync."
     exit 3
   fi
   g_output_file_list+="$outrsync "
 
-  if [ -f "$g_snapshotpath/$g_descfile" ]; then
+  if [ -f "$backpath/$g_descfile" ]; then
     # Delete the description file from the target
-    sudo rm "$g_snapshotpath/$g_descfile"
+    sudo rm "$backpath/$g_descfile"
   fi
 }
 
 function restore_dryrun {
-  local restpath=$1
+  local backpath=$1 name=$2 restpath=$3
 
   local outrsync="ts_rsync.out"
 
   # Do a dry run and record the output
-  echo rsync -aAX --dry-run --delete --verbose "--exclude-from=$g_excludespathname" "$g_snapshotpath/$snapshotname/" "$restpath/" > "/tmp/$outrsync"
-  sudo rsync -aAX --dry-run --delete --verbose "--exclude-from=$g_excludespathname" "$g_snapshotpath/$snapshotname/" "$restpath/" >> "/tmp/$outrsync"
+  echo rsync -aAX --dry-run --delete --verbose "--exclude-from=$g_excludespathname" "$backpath/$name/" "$restpath/" > "/tmp/$outrsync"
+  sudo rsync -aAX --dry-run --delete --verbose "--exclude-from=$g_excludespathname" "$backpath/$name/" "$restpath/" >> "/tmp/$outrsync"
   echo "The dry run restore has completed.  The results are found in '$outrsync'."
 }
 
@@ -301,7 +303,6 @@ backuppath="/mnt/backup"
 backupdir="ts"
 restorepath="/mnt/restore"
 
-g_snapshotpath="$backuppath/ts"
 g_excludespathname="/etc/ts_excludes"
 g_bootfile="grubx64.efi"  # Default for non-secure boot
 
@@ -390,12 +391,12 @@ mount_device_at_path "$restoredevice" "$restorepath"
 mount_device_at_path "$backupdevice" "$backuppath" "$backupdir"
 
 if [ -z $snapshotname ]; then
-  select_snapshot
+  select_snapshot "$backuppath/$backupdir"
 fi
 
 if [ ! -z $snapshotname ]; then
   if [ ! -z $dryrun ]; then
-    restore_dryrun "$restorepath"
+    restore_dryrun "$backuppath/$backupdir" "$snapshotname" "$restorepath"
   else
     printx "This will completely OVERWRITE the operating system on '$restoredevice'."
     readx "Are you sure you want to proceed? (y/N) " yn
@@ -403,7 +404,7 @@ if [ ! -z $snapshotname ]; then
       echo "Operation cancelled."
       exit
     else
-      restore_snapshot "$restorepath"
+      restore_snapshot "$backuppath/$backupdir" "$snapshotname" "$restorepath"
       echo "The snapshot '$snapshotname' was successfully restored."
     fi
 
@@ -411,6 +412,7 @@ if [ ! -z $snapshotname ]; then
     echo "restoredevice=$restoredevice"
     echo "g_bootfile=$g_bootfile"
     echo "bootdevice=$bootdevice"
+    echo
     get_bootfile "$restorepath"
 
     if [ -z $bootdevice ]; then
@@ -418,6 +420,7 @@ if [ ! -z $snapshotname ]; then
       echo "restoredevice=$restoredevice"
       echo "g_bootfile=$g_bootfile"
       echo "bootdevice=$bootdevice"
+      echo
       validate_boot_config "$restoredevice" "$restorepath"
     fi
 
@@ -426,6 +429,7 @@ if [ ! -z $snapshotname ]; then
       echo "restoredevice=$restoredevice"
       echo "g_bootfile=$g_bootfile"
       echo "bootdevice=$bootdevice"
+      echo
       build_boot "$restoredevice" "$restorepath"
     fi
 
@@ -433,9 +437,10 @@ if [ ! -z $snapshotname ]; then
     echo "restoredevice=$restoredevice"
     echo "g_bootfile=$g_bootfile"
     echo "bootdevice=$bootdevice"
+    echo
 
     # Done
-    echo "✅ Restore complete: $g_snapshotpath/$snapshotname"
+    echo "✅ Restore complete: $$backuppath/$backupdir/$snapshotname"
     echo "The system may now be rebooted into the restored partition."
     echo "Details of the operation can be viewed in these files found in /tmp: $g_output_file_list"
   fi
