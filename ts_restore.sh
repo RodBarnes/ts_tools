@@ -292,7 +292,6 @@ backuppath="/mnt/backup"
 restorepath="/mnt/restore"
 snapshotpath="$backuppath/ts"
 excludespathname="/etc/ts_excludes"
-regex="^\S{8}-\S{4}-\S{4}-\S{4}-\S{12}$"
 
 trap 'unmount_device_at_path "$backuppath"; unmount_device_at_path "$restorepath"' EXIT
 
@@ -331,12 +330,13 @@ while true; do
   esac
 done
 
+uuid_regex="^\S{8}-\S{4}-\S{4}-\S{4}-\S{12}$"
 if [ $# -ge 2 ]; then
   arg="$1"
   shift 1
   if [[ "$arg" =~ "/dev/" ]]; then
     backupdevice="$arg"
-  elif [[ "$arg" =~ $regex ]]; then
+  elif [[ "$arg" =~ $uuid_regex ]]; then
     backupdevice="UUID=$arg"
   else
     # Assume it is a label
@@ -346,7 +346,7 @@ if [ $# -ge 2 ]; then
   shift 1
   if [[ "$arg" =~ "/dev/" ]]; then
     restoredevice="$arg"
-  elif [[ "$arg" =~ $regex ]]; then
+  elif [[ "$arg" =~ $uuid_regex ]]; then
     restoredevice="UUID=$arg"
   else
     # Assume it is a label

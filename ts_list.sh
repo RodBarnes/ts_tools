@@ -94,17 +94,17 @@ function list_snapshots {
 g_descfile=comment.txt
 backuppath=/mnt/backup
 backupdir="ts"
-regex="^\S{8}-\S{4}-\S{4}-\S{4}-\S{12}$"
 
 trap 'unmount_device_at_path "$backuppath"' EXIT
 
 # Get the arguments
+uuid_regex="^\S{8}-\S{4}-\S{4}-\S{4}-\S{12}$"
 if [ $# -ge 1 ]; then
   arg="$1"
   shift 1
   if [[ "$arg" =~ "/dev/" ]]; then
     backupdevice="$arg"
-  elif [[ "$arg" =~ $regex ]]; then
+  elif [[ "$arg" =~ $uuid_regex ]]; then
     backupdevice="UUID=$arg"
   else
     # Assume it is a label
