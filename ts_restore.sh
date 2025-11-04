@@ -18,7 +18,7 @@ source /usr/local/lib/colors
 scriptname=$(basename $0)
 backuppath=/mnt/backup
 restorepath=/mnt/restore
-snapshotpath=$backuppath/snapshots
+snapshotpath=$backuppath/ts
 excludespathname=/etc/ts_excludes
 descfile=comment.txt
 outrsync=ts_rsync.out
@@ -49,57 +49,42 @@ function show_syntax () {
   exit  
 }
 
-function mount_backup_device () {
+function mount_device_at_path {
+  local device=$1 mount=$2
+  
   # Ensure mount point exists
-  if [ ! -d $backuppath ]; then
-    sudo mkdir $backuppath &> /dev/null
+  if [ ! -d $mount ]; then
+    sudo mkdir -p $mount
     if [ $? -ne 0 ]; then
-      printx "Unable to locate or created '$backuppath'."
+      printx "Unable to locate or create '$mount'." >&2
       exit 2
     fi
   fi
 
   # Attempt to mount the device
-  sudo mount $backupdevice $backuppath &> /dev/null
+  sudo mount $device $mount
   if [ $? -ne 0 ]; then
-    printx "Unable to mount the backup backupdevice '$backupdevice'."
+    printx "Unable to mount the backup backupdevice '$device'." >&2
     exit 2
   fi
 
   # Ensure the directory structure exists
-  if [ ! -d $snapshotpath ]; then
-    sudo mkdir $snapshotpath &> /dev/null
+  if [ ! -d "$mount/ts" ]; then
+    sudo mkdir "$mount/ts"
     if [ $? -ne 0 ]; then
-      printx "Unable to locate or create '$snapshotpath'."
+      printx "Unable to locate or create '$mount/ts'." >&2
       exit 2
     fi
   fi
 }
 
-function unmount_backup_device () {
-  sudo umount $backuppath
-}
+function unmount_device_at_path {
+  local mount=$1
 
-function mount_restore_device () {
-  # Ensure mount point exists
-  if [ ! -d $restorepath ]; then
-    sudo mkdir $restorepath &> /dev/null
-    if [ $? -ne 0 ]; then
-      printx "Unable to locate or created '$restorepath'."
-      exit 2
-    fi
+  # Unmount if mounted
+  if [ -d "$mount/fs" ]; then
+    sudo umount $mount
   fi
-
-  # Attempt to mount the device
-  sudo mount $restoredevice $restorepath &> /dev/null
-  if [ $? -ne 0 ]; then
-    printx "Unable to mount the restore device '$restoredevice'."
-    exit 2
-  fi
-}
-
-function unmount_restore_device () {
-  sudo umount $restorepath
 }
 
 function select_snapshot () {
@@ -375,8 +360,10 @@ fi
 # ------- MAIN -------
 # --------------------
 
-mount_restore_device
-mount_backup_device
+trap 'unmount_device_at_path "$backuppath"; unmount_device_at_path "$restorepath"' EXIT
+
+mount_device_at_path "$restoredevice" "$restorepath"
+mount_device_at_path "$backupdevice" "$backuppath"
 
 if [ -z $snapshotname ]; then
   select_snapshot
@@ -415,8 +402,5 @@ if [ ! -z $snapshotname ]; then
 else
   echo "No snapshot was identified."
 fi
-
-unmount_backup_device
-unmount_restore_device
 
 echo "✅ Restore complete: $snapshotpath/$snapshotname"

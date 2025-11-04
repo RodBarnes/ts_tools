@@ -9,7 +9,7 @@ source /usr/local/lib/colors
 
 scriptname=$(basename $0)
 backuppath=/mnt/backup
-snapshotpath=$backuppath/snapshots
+snapshotpath=$backuppath/ts
 descfile=comment.txt
 regex="^\S{8}-\S{4}-\S{4}-\S{4}-\S{12}$"
 
@@ -30,35 +30,42 @@ function show_syntax () {
   exit  
 }
 
-function mount_backup_device () {
+function mount_device_at_path {
+  local device=$1 mount=$2
+  
   # Ensure mount point exists
-  if [ ! -d $backuppath ]; then
-    sudo mkdir $backuppath &> /dev/null
+  if [ ! -d $mount ]; then
+    sudo mkdir -p $mount
     if [ $? -ne 0 ]; then
-      printx "Unable to locate or created '$backuppath'."
+      printx "Unable to locate or create '$mount'." >&2
       exit 2
     fi
   fi
 
   # Attempt to mount the device
-  sudo mount $backupdevice $backuppath &> /dev/null
+  sudo mount $device $mount
   if [ $? -ne 0 ]; then
-    printx "Unable to mount the backup backupdevice '$backupdevice'."
+    printx "Unable to mount the backup backupdevice '$device'." >&2
     exit 2
   fi
 
   # Ensure the directory structure exists
-  if [ ! -d $snapshotpath ]; then
-    sudo mkdir $snapshotpath &> /dev/null
+  if [ ! -d "$mount/ts" ]; then
+    sudo mkdir "$mount/ts"
     if [ $? -ne 0 ]; then
-      printx "Unable to locate or create '$snapshotpath'."
+      printx "Unable to locate or create '$mount/ts'." >&2
       exit 2
     fi
   fi
 }
 
-function unmount_backup_device () {
-  sudo umount $backuppath
+function unmount_device_at_path {
+  local mount=$1
+
+  # Unmount if mounted
+  if [ -d "$mount/fs" ]; then
+    sudo umount $mount
+  fi
 }
 
 function select_snapshot () {
@@ -129,7 +136,9 @@ fi
 # ------- MAIN -------
 # --------------------
 
-mount_backup_device
+trap 'unmount_device_at_path "$backuppath"' EXIT
+
+mount_device_at_path "$backupdevice" "$backuppath"
 select_snapshot
 
 if [ ! -z $snapshotname ]; then
@@ -140,15 +149,13 @@ if [ ! -z $snapshotname ]; then
   else
     sudo rm -Rf $snapshotpath/$snapshotname
     echo "'$snapshotname' has been deleted."
-    dircnt=$(find /mnt/backup/snapshots -mindepth 1 -type d | wc -l)
+    dircnt=$(find "$snapshotpath" -mindepth 1 -type d | wc -l)
     if [[ $dircnt > 0 ]]; then
       # There are still backups so fix the link to latest
-      latest=$(find /mnt/backup/snapshots -maxdepth 1 -type d -regextype posix-extended -regex '.*/[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{6}' | while read -r dir; do basename "$dir"; done | sort -r | head -n 1)
+      latest=$(find "$snapshotpath" -maxdepth 1 -type d -regextype posix-extended -regex '.*/[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{6}' | while read -r dir; do basename "$dir"; done | sort -r | head -n 1)
       ln -sfn $latest $snapshotpath/latest
     else
       sudo rm $snapshotpath/latest
     fi
   fi
 fi
-
-unmount_backup_device
