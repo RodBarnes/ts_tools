@@ -22,7 +22,7 @@ function readx {
   read -p "" $2
 }
 
-function show_syntax () {
+function show_syntax {
   echo "Delete a snapshot created with ts_backup."
   echo "Syntax: $scriptname <backup_device>"
   echo "Where:  <backup_device> can be a backupdevice designator (e.g., /dev/sdb6), a UUID, or a filesystem LABEL."
@@ -68,7 +68,7 @@ function unmount_device_at_path {
   fi
 }
 
-function select_snapshot () {
+function select_snapshot {
   # Get the snapshots
   unset snapshots
   while IFS= read -r LINE; do

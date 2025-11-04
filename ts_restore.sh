@@ -38,7 +38,7 @@ function readx {
   read -p "" $2
 }
 
-function show_syntax () {
+function show_syntax {
   echo "Restore a snapshot created with ts_backup; emulates TimeShift."
   echo "Syntax: $scriptname <backup_device> <restore_device> [-d|--dry-run] [-g|--grub-install boot_device] [-s:snapshot snapshotname]"
   echo "Where:  <backup_device> and <restore_device> can be a device designator (e.g., /dev/sdb6), a UUID, or a filesystem LABEL."
@@ -87,7 +87,7 @@ function unmount_device_at_path {
   fi
 }
 
-function select_snapshot () {
+function select_snapshot {
   # Get the snapshots and allow selecting
   echo "Listing backup files..."
 
@@ -126,7 +126,7 @@ function select_snapshot () {
   done
 }
 
-function get_bootfile () {
+function get_bootfile {
   # Check Secure Boot status
   bootfile="grubx64.efi"  # Default for non-secure boot
   securebootvar="/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c"
@@ -162,7 +162,7 @@ function get_bootfile () {
   output_file_list+="$outsecureboot "
 }
 
-function validate_boot_config () {
+function validate_boot_config {
   # Boot build was not requested so validate restored boot components
   # To see if it should be done anyway...
   echo "Validating restored boot components..."
@@ -201,7 +201,7 @@ function validate_boot_config () {
   fi
 }
 
-function build_boot () {
+function build_boot {
   # Mount the necessary directories
   sudo mount $bootdevice "$restorepath/boot/efi"
   if [ $? -ne 0 ]; then
@@ -255,7 +255,7 @@ function build_boot () {
   sudo umount "$restorepath/boot/efi" "$restorepath/dev/pts" "$restorepath/dev" "$restorepath/proc" "$restorepath/sys"
 }
 
-function restore_snapshot () {
+function restore_snapshot {
   # Restore the snapshot
   echo rsync -aAX --delete --verbose "--exclude-from=$excludespathname" "$snapshotpath/$snapshotname/" "$restorepath/" > "/tmp/$outrsync"
   sudo rsync -aAX --delete --verbose "--exclude-from=$excludespathname" "$snapshotpath/$snapshotname/" "$restorepath/" >> "/tmp/$outrsync"
@@ -271,7 +271,7 @@ function restore_snapshot () {
   fi
 }
 
-function restore_dryrun () {
+function restore_dryrun {
   # Do a dry run and record the output
   echo rsync -aAX --dry-run --delete --verbose "--exclude-from=$excludespathname" "$snapshotpath/$snapshotname/" "$restorepath/" > "/tmp/$outrsync"
   sudo rsync -aAX --dry-run --delete --verbose "--exclude-from=$excludespathname" "$snapshotpath/$snapshotname/" "$restorepath/" >> "/tmp/$outrsync"

@@ -21,7 +21,7 @@ function printx {
   printf "${YELLOW}$1${NOCOLOR}\n"
 }
 
-function show_syntax () {
+function show_syntax {
   echo "Create a TimeShift-like snapshot of the system file excluding those identified in /etc/backup-excludes."
   echo "Syntax: $scriptname <backup_device> [-d|--dry-run] [-c|--comment comment]"
   echo "Where:  <backup_device> can be a backupdevice designator (e.g., /dev/sdb6), a UUID, or a filesystem LABEL."
@@ -70,7 +70,7 @@ function unmount_device_at_path {
   fi
 }
 
-function verify_available_space () {
+function verify_available_space {
   # Check how much space is left
   space=$(df /mnt/backup | sed -n '2p;')
   IFS=' ' read dev size used avail pcent mount <<< $space
@@ -85,7 +85,7 @@ function verify_available_space () {
   fi
 }
 
-function create_snapshot () {
+function create_snapshot {
   # Create the snapshot
   if [ -n "$(find $snapshotpath -mindepth 1 -maxdepth 1 -type f -o -type d 2> /dev/null)" ]; then
     echo "Creating incremental snapshot on '$backupdevice'..."
