@@ -15,6 +15,19 @@
 
 source /usr/local/lib/colors
 
+backuppath=/mnt/backup
+restorepath=/mnt/restore
+snapshotpath=$backuppath/ts
+excludespathname=/etc/ts_excludes
+descfile=comment.txt
+outrsync=ts_rsync.out
+outgrubinstall=ts_grub-install.out
+outgrubupdate=ts_update-grub.out
+outsecureboot=ts_secureboot.out
+outefiboot=ts_efibootmgr.out
+outbootvalidate=ts_boot_validation.out
+regex="^\S{8}-\S{4}-\S{4}-\S{4}-\S{12}$"
+
 function printx {
   printf "${YELLOW}$1${NOCOLOR}\n"
 }
@@ -36,11 +49,11 @@ function show_syntax {
 }
 
 function mount_device_at_path {
-  local device=$1 mount=$2 dir=$3
+  local device=$1 mount=$2
   
   # Ensure mount point exists
   if [ ! -d $mount ]; then
-    sudo mkdir -p $mount &> /dev/null
+    sudo mkdir -p $mount
     if [ $? -ne 0 ]; then
       printx "Unable to locate or create '$mount'." >&2
       exit 2
@@ -48,22 +61,21 @@ function mount_device_at_path {
   fi
 
   # Attempt to mount the device
-  sudo mount $device $mount &> /dev/null
+  sudo mount $device $mount
   if [ $? -ne 0 ]; then
     printx "Unable to mount the backup backupdevice '$device'." >&2
     exit 2
   fi
 
-  if [ ! -z $dir ] && [ ! -d "$mount/$dir" ]; then
-    # Ensure the directory structure exists
-    sudo mkdir "$mount/$dir" &> /dev/null
+  # Ensure the directory structure exists
+  if [ ! -d "$mount/ts" ]; then
+    sudo mkdir "$mount/ts"
     if [ $? -ne 0 ]; then
-      printx "Unable to locate or create '$mount/$dir'." >&2
+      printx "Unable to locate or create '$mount/ts'." >&2
       exit 2
     fi
   fi
 }
-
 
 function unmount_device_at_path {
   local mount=$1
@@ -81,14 +93,14 @@ function select_snapshot {
   # Get the snapshots
   unset snapshots
   while IFS= read -r backup; do
-    echo "path=$$backuppath/$backupdir/$backup/$g_descfile" >&2
-    if [ -f "$$backuppath/$backupdir/$backup/$g_descfile" ]; then
-      comment=$(cat "$$backuppath/$backupdir/$backup/$g_descfile")
+    echo "path=$snapshotpath/$backup/$descfile" >&2
+    if [ -f "$snapshotpath/$backup/$descfile" ]; then
+      comment=$(cat "$snapshotpath/$backup/$descfile")
     else
       comment="<no desc>"
     fi
     snapshots+=("${backup}: $comment")
-  done < <( find $$backuppath/$backupdir -mindepth 1 -maxdepth 1 -type d | cut -d '/' -f5 )
+  done < <( find $snapshotpath -mindepth 1 -maxdepth 1 -type d | cut -d '/' -f5 )
 
   # Get the count of options and increment to include the cancel
   count="${#snapshots[@]}"
@@ -114,9 +126,6 @@ function select_snapshot {
 }
 
 function get_bootfile {
-
-  local outsecureboot=ts_secureboot.out
-
   # Check Secure Boot status
   bootfile="grubx64.efi"  # Default for non-secure boot
   securebootvar="/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c"
@@ -149,13 +158,10 @@ function get_bootfile {
       echo "SetupMode last byte: $setupmode" >> "/tmp/$outsecureboot"
     fi
   fi
-  g_output_file_list+="$outsecureboot "
+  output_file_list+="$outsecureboot "
 }
 
 function validate_boot_config {
-
-  local outbootvalidate=ts_boot_validation.out
-
   # Boot build was not requested so validate restored boot components
   # To see if it should be done anyway...
   echo "Validating restored boot components..."
@@ -192,15 +198,9 @@ function validate_boot_config {
       fi
     done
   fi
-  g_output_file_list+="$outbootvalidate "
 }
 
 function build_boot {
-
-  local outgrubinstall=ts_grub-install.out
-  local outgrubupdate=ts_update-grub.out
-  local outefiboot=ts_efibootmgr.out
-
   # Mount the necessary directories
   sudo mount $bootdevice "$restorepath/boot/efi"
   if [ $? -ne 0 ]; then
@@ -220,14 +220,14 @@ function build_boot {
   if [ $? -ne 0 ]; then
     printx "Something went wrong with 'update-grub'.  The details are in /tmp/$outgrubupdate."
   fi
-  g_output_file_list+="$outgrubupdate "
+  output_file_list+="$outgrubupdate "
 
   echo "Installing grub on $restoredevice..."
   sudo chroot "$restorepath" grub-install --target=x86_64-efi --efi-directory=/boot/efi --boot-directory=/boot &> "/tmp/$outgrubinstall"
   if [ $? -ne 0 ]; then
     printx "Something went wrong with 'grub-install'.  The details are in /tmp/$outgrubinstall."
   fi
-  g_output_file_list+="$outgrubinstall "
+  output_file_list+="$outgrubinstall "
 
   # Check for an existing boot entry
   osid=$(grep "^ID=" "$restorepath/etc/os-release" | cut -d'=' -f2 | tr -d '"')
@@ -248,50 +248,38 @@ function build_boot {
   else
     echo "Successfully copied $bootfile to EFI/BOOT/BOOTX64.EFI" >> "/tmp/$outefiboot"
   fi
-  g_output_file_list+="$outefiboot "
+  output_file_list+="$outefiboot "
 
   # Unbind the directories
   sudo umount "$restorepath/boot/efi" "$restorepath/dev/pts" "$restorepath/dev" "$restorepath/proc" "$restorepath/sys"
 }
 
 function restore_snapshot {
-
-  local excludespathname=/etc/ts_excludes
-  local outrsync=ts_rsync.out
-
   # Restore the snapshot
-  echo rsync -aAX --delete --verbose "--exclude-from=$excludespathname" "$$backuppath/$backupdir/$snapshotname/" "$restorepath/" > "/tmp/$outrsync"
-  sudo rsync -aAX --delete --verbose "--exclude-from=$excludespathname" "$$backuppath/$backupdir/$snapshotname/" "$restorepath/" >> "/tmp/$outrsync"
+  echo rsync -aAX --delete --verbose "--exclude-from=$excludespathname" "$snapshotpath/$snapshotname/" "$restorepath/" > "/tmp/$outrsync"
+  sudo rsync -aAX --delete --verbose "--exclude-from=$excludespathname" "$snapshotpath/$snapshotname/" "$restorepath/" >> "/tmp/$outrsync"
   if [ $? -ne 0 ]; then
     printx "Something went wrong with the restore.  The details are in /tmp/$outrsync."
     exit 3
   fi
-  g_output_file_list+="$outrsync "
+  output_file_list+="$outrsync "
 
-  if [ -f "$$backuppath/$backupdir/$g_descfile" ]; then
+  if [ -f "$snapshotpath/$descfile" ]; then
     # Delete the description file from the target
-    sudo rm "$$backuppath/$backupdir/$g_descfile"
+    sudo rm "$snapshotpath/$descfile"
   fi
 }
 
 function restore_dryrun {
   # Do a dry run and record the output
-  echo rsync -aAX --dry-run --delete --verbose "--exclude-from=$excludespathname" "$$backuppath/$backupdir/$snapshotname/" "$restorepath/" > "/tmp/$outrsync"
-  sudo rsync -aAX --dry-run --delete --verbose "--exclude-from=$excludespathname" "$$backuppath/$backupdir/$snapshotname/" "$restorepath/" >> "/tmp/$outrsync"
+  echo rsync -aAX --dry-run --delete --verbose "--exclude-from=$excludespathname" "$snapshotpath/$snapshotname/" "$restorepath/" > "/tmp/$outrsync"
+  sudo rsync -aAX --dry-run --delete --verbose "--exclude-from=$excludespathname" "$snapshotpath/$snapshotname/" "$restorepath/" >> "/tmp/$outrsync"
   echo "The dry run restore has completed.  The results are found in '$outrsync'."
 }
 
 # --------------------
 # ------- MAIN -------
 # --------------------
-
-g_descfile=comment.txt
-g_output_file_list=()
-backuppath=/mnt/backup
-backupdir="ts"
-restorepath=/mnt/restore
-regex="^\S{8}-\S{4}-\S{4}-\S{4}-\S{12}$"
-
 
 trap 'unmount_device_at_path "$backuppath"; unmount_device_at_path "$restorepath"' EXIT
 
@@ -374,7 +362,7 @@ if [ ! -e $restoredevice ]; then
 fi
 
 mount_device_at_path "$restoredevice" "$restorepath"
-mount_device_at_path "$backupdevice" "$backuppath" "$backupdir"
+mount_device_at_path "$backupdevice" "$backuppath"
 
 if [ -z $snapshotname ]; then
   select_snapshot
@@ -408,10 +396,10 @@ if [ ! -z $snapshotname ]; then
 
     # Done
     echo "The system may now be rebooted into the restored partition."
-    echo "Details of the operation can be viewed in these files found in /tmp: $g_output_file_list"
+    echo "Details of the operation can be viewed in these files found in /tmp: $output_file_list"
   fi
 else
   echo "No snapshot was identified."
 fi
 
-echo "✅ Restore complete: $backuppath/$backupdir/$snapshotname"
+echo "✅ Restore complete: $snapshotpath/$snapshotname"
