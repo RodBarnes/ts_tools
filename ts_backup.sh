@@ -6,13 +6,6 @@
 
 source /usr/local/lib/colors
 
-backuppath=/mnt/backup
-snapshotpath=$backuppath/ts
-snapshotname=$(date +%Y-%m-%d-%H%M%S)
-descfile=comment.txt
-minimum_space=5000000
-regex="^\S{8}-\S{4}-\S{4}-\S{4}-\S{12}$"
-
 function printx {
   printf "${YELLOW}$1${NOCOLOR}\n"
 }
@@ -27,13 +20,12 @@ function show_syntax {
   exit
 }
 
-
 function mount_device_at_path {
-  local device=$1 mount=$2
+  local device=$1 mount=$2 dir=$3
   
   # Ensure mount point exists
   if [ ! -d $mount ]; then
-    sudo mkdir -p $mount
+    sudo mkdir -p $mount &> /dev/null
     if [ $? -ne 0 ]; then
       printx "Unable to locate or create '$mount'." >&2
       exit 2
@@ -41,17 +33,17 @@ function mount_device_at_path {
   fi
 
   # Attempt to mount the device
-  sudo mount $device $mount
+  sudo mount $device $mount &> /dev/null
   if [ $? -ne 0 ]; then
     printx "Unable to mount the backup backupdevice '$device'." >&2
     exit 2
   fi
 
-  # Ensure the directory structure exists
-  if [ ! -d "$mount/ts" ]; then
-    sudo mkdir "$mount/ts"
+  if [ ! -z $dir ] && [ ! -d "$mount/$dir" ]; then
+    # Ensure the directory structure exists
+    sudo mkdir "$mount/$dir" &> /dev/null
     if [ $? -ne 0 ]; then
-      printx "Unable to locate or create '$mount/ts'." >&2
+      printx "Unable to locate or create '$mount/$dir'." >&2
       exit 2
     fi
   fi
@@ -107,7 +99,7 @@ function create_snapshot {
     fi
 
     # Create comment in the snapshot directory
-    echo "($(sudo du -sh $path/$name | awk '{print $1}')) $note" > "$path/$name/$descfile"
+    echo "($(sudo du -sh $path/$name | awk '{print $1}')) $note" > "$path/$name/$g_descfile"
 
     # Done
     echo "The snapshot '$name' was successfully completed." >&2
@@ -119,6 +111,14 @@ function create_snapshot {
 # --------------------
 # ------- MAIN -------
 # --------------------
+
+g_descfile=comment.txt
+backuppath=/mnt/backup
+backupdir="ts"
+snapshotname=$(date +%Y-%m-%d-%H%M%S)
+minimum_space=5000000
+regex="^\S{8}-\S{4}-\S{4}-\S{4}-\S{12}$"
+
 
 trap 'unmount_device_at_path "$backuppath"' EXIT
 
@@ -180,8 +180,8 @@ if [[ "$EUID" != 0 ]]; then
   exit 1
 fi
 
-mount_device_at_path  "$backupdevice" "$backuppath"
+mount_device_at_path  "$backupdevice" "$backuppath" "$backupdir"
 verify_available_space "$backupdevice" "$minimum_space"
-create_snapshot "$backupdevice" "$snapshotpath" "$snapshotname" "$comment" "$dryrun"
+create_snapshot "$backupdevice" "$backuppath/$backupdir" "$snapshotname" "$comment" "$dryrun"
 
-echo "✅ Backup complete: $snapshotpath/$snapshotname"
+echo "✅ Backup complete: $backuppath/$backupdir/$snapshotname"

@@ -7,11 +7,6 @@
 
 source /usr/local/lib/colors
 
-backuppath=/mnt/backup
-snapshotpath=$backuppath/ts
-descfile=comment.txt
-regex="^\S{8}-\S{4}-\S{4}-\S{4}-\S{12}$"
-
 function printx {
   printf "${YELLOW}$1${NOCOLOR}\n"
 }
@@ -30,11 +25,11 @@ function show_syntax {
 }
 
 function mount_device_at_path {
-  local device=$1 mount=$2
+  local device=$1 mount=$2 dir=$3
   
   # Ensure mount point exists
   if [ ! -d $mount ]; then
-    sudo mkdir -p $mount
+    sudo mkdir -p $mount &> /dev/null
     if [ $? -ne 0 ]; then
       printx "Unable to locate or create '$mount'." >&2
       exit 2
@@ -42,21 +37,22 @@ function mount_device_at_path {
   fi
 
   # Attempt to mount the device
-  sudo mount $device $mount
+  sudo mount $device $mount &> /dev/null
   if [ $? -ne 0 ]; then
     printx "Unable to mount the backup backupdevice '$device'." >&2
     exit 2
   fi
 
-  # Ensure the directory structure exists
-  if [ ! -d "$mount/ts" ]; then
-    sudo mkdir "$mount/ts"
+  if [ ! -z $dir ] && [ ! -d "$mount/$dir" ]; then
+    # Ensure the directory structure exists
+    sudo mkdir "$mount/$dir" &> /dev/null
     if [ $? -ne 0 ]; then
-      printx "Unable to locate or create '$mount/ts'." >&2
+      printx "Unable to locate or create '$mount/$dir'." >&2
       exit 2
     fi
   fi
 }
+
 
 function unmount_device_at_path {
   local mount=$1
@@ -75,8 +71,8 @@ function select_snapshot {
 
   while IFS= read -r dirname; do
     name=("${dirname}")
-    if [ -f "$path/$name/$descfile" ]; then
-      note="$(cat $path/$name/$descfile)"
+    if [ -f "$path/$name/$g_descfile" ]; then
+      note="$(cat $path/$name/$g_descfile)"
     else
       note="<no desc>"
     fi
@@ -141,6 +137,11 @@ function delete_snapshot {
 # ------- MAIN -------
 # --------------------
 
+g_descfile=comment.txt
+backuppath=/mnt/backup
+backupdir="ts"
+regex="^\S{8}-\S{4}-\S{4}-\S{4}-\S{12}$"
+
 trap 'unmount_device_at_path "$backuppath"' EXIT
 
 # Get the arguments
@@ -165,9 +166,9 @@ if [[ "$EUID" != 0 ]]; then
   exit 1
 fi
 
-mount_device_at_path "$backupdevice" "$backuppath"
-snapshotname=$(select_snapshot "$backupdevice" "$snapshotpath")
+mount_device_at_path "$backupdevice" "$backuppath" "$backupdir"
+snapshotname=$(select_snapshot "$backupdevice" "$backuppath/$backupdir")
 
 if [ ! -z $snapshotname ]; then
-  delete_snapshot "$snapshotpath" "$snapshotname"
+  delete_snapshot "$backuppath/$backupdir" "$snapshotname"
 fi
