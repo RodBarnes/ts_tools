@@ -366,10 +366,10 @@ if [[ "$EUID" != 0 ]]; then
   exit 1
 fi
 
-# if [ ! -e $restoredevice ]; then
-#   printx "There is no such device: $restoredevice."
-#   exit 2
-# fi
+if [ ! -e $restoredevice ]; then
+  printx "There is no such device: $restoredevice."
+  exit 2
+fi
 
 # --------------------
 # ------- MAIN -------
