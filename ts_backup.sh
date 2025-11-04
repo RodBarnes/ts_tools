@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 
 # Create a snapshot using rsync command as done by TimeShift.
-# One of the followin is required parameter: <backupdevice>, <label>, or <uuid> for mounting the backupdevice
-# Optional parameter: <desc> -- Description of the snapshot, quote-bounded
-# Optional parameter: -t -- Include to do a dry-run
 
 # NOTE: This script expects to find the listed mountpoints.  If not present, it will create them.
 
@@ -14,7 +11,7 @@ backuppath=/mnt/backup
 snapshotpath=$backuppath/ts
 snapshotname=$(date +%Y-%m-%d-%H%M%S)
 descfile=comment.txt
-minspace=5000000
+minimum_space=5000000
 regex="^\S{8}-\S{4}-\S{4}-\S{4}-\S{12}$"
 
 function printx {
@@ -71,49 +68,52 @@ function unmount_device_at_path {
 }
 
 function verify_available_space {
+  local device=$1 minspace=$2
+
   # Check how much space is left
   space=$(df /mnt/backup | sed -n '2p;')
   IFS=' ' read dev size used avail pcent mount <<< $space
   if [[ $avail -lt $minspace ]]; then
-    printx "The backupdevice '$backupdevice' has less only $avail space left of the total $size."
+    printx "The backupdevice '$device' has less only $avail space left of the total $size." >&2
     read -p "Do you want to proceed? (y/N) " yn
     if [[ $yn != "y" && $yn != "Y" ]]; then
-      echo "Operation cancelled."
-      unmount_backup_device
+      echo "Operation cancelled." >&2
       exit
     fi
   fi
 }
 
 function create_snapshot {
+  local device=$1 path=$2 name=$3 note=$4 dry=$5
+
   # Create the snapshot
-  if [ -n "$(find $snapshotpath -mindepth 1 -maxdepth 1 -type f -o -type d 2> /dev/null)" ]; then
-    echo "Creating incremental snapshot on '$backupdevice'..."
+  if [ -n "$(find $path -mindepth 1 -maxdepth 1 -type f -o -type d 2> /dev/null)" ]; then
+    echo "Creating incremental snapshot on '$device'..." >&2
     # Snapshots exist so create incremental snapshot referencing the latest
-    sudo rsync -aAX $dryrun --delete --link-dest=../latest --exclude-from=/etc/ts_excludes / "$snapshotpath/$snapshotname/"
+    sudo rsync -aAX $dry --delete --link-dest=../latest --exclude-from=/etc/ts_excludes / "$path/$name/"
   else
-    echo "Creating full snapshot on '$backupdevice'..."
+    echo "Creating full snapshot on '$device'..." >&2
     # This is the first snapshot so create full snapshot
-    sudo rsync -aAX $dryrun --delete --exclude-from=/etc/ts_excludes / "$snapshotpath/$snapshotname/"
+    sudo rsync -aAX $dry --delete --exclude-from=/etc/ts_excludes / "$path/$name/"
   fi
 
-  if [ -z $dryrun ]; then
+  if [ -z $dry ]; then
     # This was NOT a dry run so...
     # Update "latest"
-    ln -sfn $snapshotname $snapshotpath/latest
+    ln -sfn $name $path/latest
 
-    # Use a default description if one was not provided
-    if [ -z "$description" ]; then
-      description="<no desc>"
+    # Use a default comment if one was not provided
+    if [ -z "$note" ]; then
+      note="<no desc>"
     fi
 
-    # Create description in the snapshot directory
-    echo "($(sudo du -sh $snapshotpath/$snapshotname | awk '{print $1}')) $description" > "$snapshotpath/$snapshotname/$descfile"
+    # Create comment in the snapshot directory
+    echo "($(sudo du -sh $path/$name | awk '{print $1}')) $note" > "$path/$name/$descfile"
 
     # Done
-    echo "The snapshot '$snapshotname' was successfully completed."
+    echo "The snapshot '$name' was successfully completed." >&2
   else
-    echo "Dry run complete"
+    echo "Dry run complete" >&2
   fi
 }
 
@@ -134,7 +134,7 @@ while true; do
       shift
       ;;
     -c|--comment)
-      description="$2"
+      comment="$2"
       shift 2
       ;;
     --) # End of options
@@ -166,7 +166,7 @@ fi
 
 # echo "Device:$backupdevice"
 # echo "Dry-run:$dryrun"
-# echo "Desc:$description"
+# echo "Comment:$comment"
 # exit
 
 # Confirm running as sudo
@@ -182,7 +182,7 @@ fi
 trap 'unmount_device_at_path "$backuppath"' EXIT
 
 mount_device_at_path  "$backupdevice" "$backuppath"
-verify_available_space
-create_snapshot
+verify_available_space "$backupdevice" "$minimum_space"
+create_snapshot "$backupdevice" "$snapshotpath" "$snapshotname" "$comment" "$dryrun"
 
 echo "✅ Backup complete: $snapshotpath/$snapshotname"
