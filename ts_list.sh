@@ -86,6 +86,12 @@ function list_snapshots {
   fi
 }
 
+# --------------------
+# ------- MAIN -------
+# --------------------
+
+trap 'unmount_device_at_path "$backuppath"' EXIT
+
 # Get the arguments
 if [ $# -ge 1 ]; then
   arg="$1"
@@ -107,12 +113,6 @@ if [[ "$EUID" != 0 ]]; then
   printx "This must be run as sudo.\n"
   exit 1
 fi
-
-# --------------------
-# ------- MAIN -------
-# --------------------
-
-trap 'unmount_device_at_path "$backuppath"' EXIT
 
 mount_device_at_path "$backupdevice" "$backuppath"
 list_snapshots

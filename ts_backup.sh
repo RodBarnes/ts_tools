@@ -117,6 +117,12 @@ function create_snapshot {
   fi
 }
 
+# --------------------
+# ------- MAIN -------
+# --------------------
+
+trap 'unmount_device_at_path "$backuppath"' EXIT
+
 # Get the arguments
 arg_short=dc:
 arg_long=dry-run,comment:
@@ -174,12 +180,6 @@ if [[ "$EUID" != 0 ]]; then
   printx "This must be run as sudo.\n"
   exit 1
 fi
-
-# --------------------
-# ------- MAIN -------
-# --------------------
-
-trap 'unmount_device_at_path "$backuppath"' EXIT
 
 mount_device_at_path  "$backupdevice" "$backuppath"
 verify_available_space "$backupdevice" "$minimum_space"
