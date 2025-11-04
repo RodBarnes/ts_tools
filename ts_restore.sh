@@ -13,19 +13,6 @@
 
 source /usr/local/lib/colors
 
-backuppath=/mnt/backup
-restorepath=/mnt/restore
-snapshotpath=$backuppath/ts
-excludespathname=/etc/ts_excludes
-descfile=comment.txt
-outrsync=ts_rsync.out
-outgrubinstall=ts_grub-install.out
-outgrubupdate=ts_update-grub.out
-outsecureboot=ts_secureboot.out
-outefiboot=ts_efibootmgr.out
-outbootvalidate=ts_boot_validation.out
-regex="^\S{8}-\S{4}-\S{4}-\S{4}-\S{12}$"
-
 function printx {
   printf "${YELLOW}$1${NOCOLOR}\n"
 }
@@ -47,11 +34,11 @@ function show_syntax {
 }
 
 function mount_device_at_path {
-  local device=$1 mount=$2
+  local device=$1 mount=$2 dir=$3
   
   # Ensure mount point exists
   if [ ! -d $mount ]; then
-    sudo mkdir -p $mount
+    sudo mkdir -p $mount &> /dev/null
     if [ $? -ne 0 ]; then
       printx "Unable to locate or create '$mount'." >&2
       exit 2
@@ -59,17 +46,17 @@ function mount_device_at_path {
   fi
 
   # Attempt to mount the device
-  sudo mount $device $mount
+  sudo mount $device $mount &> /dev/null
   if [ $? -ne 0 ]; then
     printx "Unable to mount the backup backupdevice '$device'." >&2
     exit 2
   fi
 
-  # Ensure the directory structure exists
-  if [ ! -d "$mount/ts" ]; then
-    sudo mkdir "$mount/ts"
+  if [ ! -z $dir ] && [ ! -d "$mount/$dir" ]; then
+    # Ensure the directory structure exists
+    sudo mkdir "$mount/$dir" &> /dev/null
     if [ $? -ne 0 ]; then
-      printx "Unable to locate or create '$mount/ts'." >&2
+      printx "Unable to locate or create '$mount/$dir'." >&2
       exit 2
     fi
   fi
@@ -377,7 +364,7 @@ if [ ! -e $restoredevice ]; then
 fi
 
 mount_device_at_path "$restoredevice" "$restorepath"
-mount_device_at_path "$backupdevice" "$backuppath"
+mount_device_at_path "$backupdevice" "$backuppath" "$dir"
 
 if [ -z $snapshotname ]; then
   select_snapshot
