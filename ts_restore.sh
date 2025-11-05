@@ -199,6 +199,8 @@ function validate_boot_config {
         printx "That is not a recognized device." >&2
       fi
     done
+  else
+    echo "Boot configuration appears valid." &>> "$g_outputfile"
   fi
 }
 
