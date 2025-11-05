@@ -224,6 +224,13 @@ function build_boot {
   sudo mount --bind /sys "$restpath/sys"
   sudo mount --bind /dev/pts "$restpath/dev/pts"
 
+  echo "Installing grub on $restdev..." >&2
+  sudo chroot "$restpath" grub-install --target=x86_64-efi --efi-directory=/boot/efi --boot-directory=/boot &> "/tmp/$outgrubinstall"
+  if [ $? -ne 0 ]; then
+    printx "Something went wrong with 'grub-install'.  The details are in /tmp/$outgrubinstall." >&2
+  fi
+  g_output_file_list+="$outgrubinstall "
+
   echo "Updating grub on $restdev..." >&2
   # Use chroot to rebuild grub on the restored partion
   sudo chroot "$restpath" update-grub &> "/tmp/$outgrubupdate"
@@ -231,13 +238,6 @@ function build_boot {
     printx "Something went wrong with 'update-grub'.  The details are in /tmp/$outgrubupdate."
   fi
   g_output_file_list+="$outgrubupdate "
-
-  echo "Installing grub on $restdev..." >&2
-  sudo chroot "$restpath" grub-install --target=x86_64-efi --efi-directory=/boot/efi --boot-directory=/boot &> "/tmp/$outgrubinstall"
-  if [ $? -ne 0 ]; then
-    printx "Something went wrong with 'grub-install'.  The details are in /tmp/$outgrubinstall." >&2
-  fi
-  g_output_file_list+="$outgrubinstall "
 
   # Check for an existing boot entry
   if ! sudo efibootmgr | grep -q "$osid"; then
