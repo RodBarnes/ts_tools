@@ -120,68 +120,68 @@ function select_snapshot {
 function get_bootfile {
   local restpath=$1
 
-  local outsecureboot="ts_secureboot.out"
   local setupmode
   local securebootval
   local securebootvar="/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c"
   local setupmodevar="/sys/firmware/efi/efivars/SetupMode-8be4df61-93ca-11d2-aa0d-00e098032b8c"
 
+  echo "---${FUNCNAME}---" &>> "$g_outputfile"
+
   # Check Secure Boot status
-  echo "Checking SecureBoot EFI variable" > "/tmp/$outsecureboot"
+  echo "Checking SecureBoot EFI variable" &>> "$g_outputfile"
   if [ -f "$securebootvar" ]; then
     securebootval=$(sudo hexdump -v -e '/1 "%02x"' "$securebootvar" | tail -c 2)
-    echo "SecureBoot last byte: $securebootval" >> "/tmp/$outsecureboot"
+    echo "SecureBoot last byte: $securebootval" &>> "$g_outputfile"
     if [ -f "$setupmodevar" ]; then
       setupmode=$(sudo hexdump -v -e '/1 "%02x"' "$setupmodevar" | tail -c 2)
-      echo "SetupMode last byte: $setupmode" >> "/tmp/$outsecureboot"
+      echo "SetupMode last byte: $setupmode" &>> "$g_outputfile"
     else
-      echo "SetupMode variable not found" >> "/tmp/$outsecureboot"
+      echo "SetupMode variable not found" &>> "$g_outputfile"
     fi
     if [ "$securebootval" = "01" ]; then
       # Secure Boot enabled; use shimx64.efi if present
       if [ -f "$restpath/boot/efi/EFI/debian/shimx64.efi" ]; then
         g_bootfile="shimx64.efi"
-        echo "SecureBoot enabled (EFI variable: $securebootval); using $g_bootfile." >> "/tmp/$outsecureboot"
+        echo "SecureBoot enabled (EFI variable: $securebootval); using $g_bootfile." &>> "$g_outputfile"
       else
-        echo "SecureBoot enabled but shimx64.efi not found; using $g_bootfile." >> "/tmp/$outsecureboot"
+        echo "SecureBoot enabled but shimx64.efi not found; using $g_bootfile." &>> "$g_outputfile"
       fi
     else
-      echo "SecureBoot disabled (EFI variable: $securebootval); using $g_bootfile." >> "/tmp/$outsecureboot"
+      echo "SecureBoot disabled (EFI variable: $securebootval); using $g_bootfile." &>> "$g_outputfile"
     fi
   else
-    echo "SecureBoot variable not found; defaulting to $g_bootfile" >> "/tmp/$outsecureboot"
+    echo "SecureBoot variable not found; defaulting to $g_bootfile" &>> "$g_outputfile"
     if [ -f "$setupmodevar" ]; then
       setupmode=$(sudo hexdump -v -e '/1 "%02x"' "$setupmodevar" | tail -c 2)
-      echo "SetupMode last byte: $setupmode" >> "/tmp/$outsecureboot"
+      echo "SetupMode last byte: $setupmode" &>> "$g_outputfile"
     fi
   fi
-
-  g_output_file_list+="$outsecureboot "
 }
 
 function validate_boot_config {
   local restdev=$1 restpath=$2
 
-  local outbootvalidate="ts_boot_validation.out"
   local boot_valid=1
+
+  echo "---${FUNCNAME}---" &>> "$g_outputfile"
 
   # Boot build was not requested so validate restored boot components
   # To see if it should be done anyway...
   echo "Validating restored boot components..." >&2
   if [ ! -f "$restpath/boot/grub/grub.cfg" ]; then
-    echo "Warning: $restpath/boot/grub/grub.cfg not found" > "/tmp/$outbootvalidate"
+    echo "Warning: $restpath/boot/grub/grub.cfg not found" &>> "$g_outputfile"
     boot_valid=0
   fi
   if [ ! -d "$restpath/boot/grub" ]; then
-    echo "Warning: $restpath/boot/grub directory not found" >> "/tmp/$outbootvalidate"
+    echo "Warning: $restpath/boot/grub directory not found" &>> "$g_outputfile"
     boot_valid=0
   fi
   if [ -z "$(ls $restpath/boot/vmlinuz* 2>/dev/null)" ]; then
-    echo "Warning: No kernel images found in $restpath/boot/vmlinuz*" >> "/tmp/$outbootvalidate"
+    echo "Warning: No kernel images found in $restpath/boot/vmlinuz*" &>> "$g_outputfile"
     boot_valid=0
   fi
   if [ ! -f "$restpath/boot/efi/EFI/debian/$g_bootfile" ]; then
-    echo "Warning: Bootloader file $restpath/boot/efi/EFI/debian/$g_bootfile not found" >> "/tmp/$outbootvalidate"
+    echo "Warning: Bootloader file $restpath/boot/efi/EFI/debian/$g_bootfile not found" &>> "$g_outputfile"
     boot_valid=0
   fi
   if [ $boot_valid -eq 0 ]; then
@@ -200,18 +200,15 @@ function validate_boot_config {
       fi
     done
   fi
-
-  g_output_file_list+="$outbootvalidate "
 }
 
 function build_boot {
   local restdev=$1 restpath=$2
 
-  local outgrubinstall="ts_grub-install.out"
-  local outgrubupdate="ts_update-grub.out"
-  local outefiboot="ts_efibootmgr.out"
   local osid=$(grep "^ID=" "$restpath/etc/os-release" | cut -d'=' -f2 | tr -d '"')
   local partno=$(lsblk -no PARTN "$restdev" 2>/dev/null || echo "2")
+
+  echo "---${FUNCNAME}---" &>> "$g_outputfile"
 
   # Mount the necessary directories
   sudo mount $bootdevice "$restpath/boot/efi"
@@ -225,55 +222,61 @@ function build_boot {
   sudo mount --bind /dev/pts "$restpath/dev/pts"
 
   echo "Installing grub on $restdev..." >&2
-  sudo chroot "$restpath" grub-install --target=x86_64-efi --efi-directory=/boot/efi --boot-directory=/boot &> "/tmp/$outgrubinstall"
+  sudo chroot "$restpath" grub-install --target=x86_64-efi --efi-directory=/boot/efi --boot-directory=/boot &>> "$g_outputfile"
   if [ $? -ne 0 ]; then
-    printx "Something went wrong with 'grub-install'.  The details are in /tmp/$outgrubinstall." >&2
+    printx "Something went wrong with 'grub-install'.  Check '$g_outputfile' for details." >&2
   fi
-  g_output_file_list+="$outgrubinstall "
-
+  
   echo "Updating grub on $restdev..." >&2
   # Use chroot to rebuild grub on the restored partion
-  sudo chroot "$restpath" update-grub &> "/tmp/$outgrubupdate"
+  sudo chroot "$restpath" update-grub &>> "$g_outputfile"
   if [ $? -ne 0 ]; then
-    printx "Something went wrong with 'update-grub'.  The details are in /tmp/$outgrubupdate."
+    printx "Something went wrong with 'update-grub'.  Check '$g_outputfile' for details." >&2
   fi
-  g_output_file_list+="$outgrubupdate "
-
+  
+  echo "Checking EFI on $bootdevice" >&2
   # Check for an existing boot entry
+  sudo efibootmgr | grep -q "$osid" &>> "$g_outputfile"
   if ! sudo efibootmgr | grep -q "$osid"; then
     echo "Building the UEFI boot entry on $bootdevice with an entry for $restdev..." >&2
 
     # Set UEFI boot entry -- where partno is the target partition for the boot entry
-    sudo efibootmgr -c -d $bootdevice -p $partno -L $osid -l "/EFI/$osid/$g_bootfile" &> "/tmp/$outefiboot"
+    sudo efibootmgr -c -d $bootdevice -p $partno -L $osid -l "/EFI/$osid/$g_bootfile" &>> "$g_outputfile"
     if [ $? -ne 0 ]; then
-      printx "Something went wrong with 'efibootmgr'. The details are in /tmp/$outefiboot." >&2
+      printx "Something went wrong with 'efibootmgr'. Check '$g_outputfile' for details." >&2
     fi
-  fi
-  # Copy bootloader to default EFI path as a fall back
-  sudo cp "$restpath/boot/efi/EFI/$osid/$g_bootfile" "$restpath/boot/efi/EFI/BOOT/BOOTX64.EFI"
-  if [ $? -ne 0 ]; then
-    echo "Warning: Failed to copy $g_bootfile to EFI/BOOT/BOOTX64.EFI" >> "/tmp/$outefiboot"
   else
-    echo "Successfully copied $g_bootfile to EFI/BOOT/BOOTX64.EFI" >> "/tmp/$outefiboot"
+    echo "Confirmed EFI boot entry for '$osid' exists." &>> "$g_outputfile"
+  fi
+
+  if [ ! -f "$restorepath/boot/efi/EFI/BOOT/BOOTX64.EFI" ]; then
+    # Copy bootloader to default EFI path as a fall back
+    sudo cp "$restpath/boot/efi/EFI/$osid/$g_bootfile" "$restpath/boot/efi/EFI/BOOT/BOOTX64.EFI" &>> "$g_outputfile"
+    if [ $? -ne 0 ]; then
+      echo "Warning: Failed to copy $g_bootfile to EFI/BOOT/BOOTX64.EFI" &>> "$g_outputfile"
+    else
+      echo "Successfully copied $g_bootfile to EFI/BOOT/BOOTX64.EFI" &>> "$g_outputfile"
+    fi
+  else
+    echo "Confirmed '$restorepath/boot/efi/EFI/BOOT/BOOTX64.EFI' exists for fallback." &>> "$g_outputfile"
   fi
 
   # Unbind the directories
   sudo umount "$restpath/boot/efi" "$restpath/dev/pts" "$restpath/dev" "$restpath/proc" "$restpath/sys"
-
-  g_output_file_list+="$outefiboot "
 }
 
 function restore_snapshot {
   local backpath=$1 name=$2 restpath=$3
 
-  local outrsync="ts_rsync.out"
   local excludespathname="/etc/ts_excludes"
 
+  echo "---${FUNCNAME}---" &>> "$g_outputfile"
+
   # Restore the snapshot
-  echo rsync -aAX --delete --verbose "--exclude-from=$excludespathname" "$backpath/$name/" "$restpath/" > "/tmp/$outrsync"
-  sudo rsync -aAX --delete --verbose "--exclude-from=$excludespathname" "$backpath/$name/" "$restpath/" >> "/tmp/$outrsync"
+  echo rsync -aAX --delete --verbose "--exclude-from=$excludespathname" "$backpath/$name/" "$restpath/" &>> "$g_outputfile"
+  sudo rsync -aAX --delete --verbose "--exclude-from=$excludespathname" "$backpath/$name/" "$restpath/" &>> "$g_outputfile"
   if [ $? -ne 0 ]; then
-    printx "Something went wrong with the restore.  The details are in /tmp/$outrsync." >&2
+    printx "Something went wrong with the restore.  Check '$g_outputfile' for details." >&2
     exit 3
   fi
 
@@ -281,21 +284,18 @@ function restore_snapshot {
     # Delete the description file from the target
     sudo rm "$backpath/$g_descfile"
   fi
-
-  g_output_file_list+="$outrsync "
 }
 
 function dryrun_snapshot {
   local backpath=$1 name=$2 restpath=$3
 
-  local outrsync="ts_rsync.out"
   local excludespathname="/etc/ts_excludes"
 
-  # Do a dry run and record the output
-  echo rsync -aAX --dry-run --delete --verbose "--exclude-from=$excludespathname" "$backpath/$name/" "$restpath/" > "/tmp/$outrsync"
-  sudo rsync -aAX --dry-run --delete --verbose "--exclude-from=$excludespathname" "$backpath/$name/" "$restpath/" >> "/tmp/$outrsync"
+  echo "---${FUNCNAME}---" &>> "$g_outputfile"
 
-  g_output_file_list+="$outrsync "
+  # Do a dry run and record the output
+  echo rsync -aAX --dry-run --delete --verbose "--exclude-from=$excludespathname" "$backpath/$name/" "$restpath/" &>> "$g_outputfile"
+  sudo rsync -aAX --dry-run --delete --verbose "--exclude-from=$excludespathname" "$backpath/$name/" "$restpath/" &>> "$g_outputfile"
 }
 
 # --------------------
@@ -304,7 +304,7 @@ function dryrun_snapshot {
 
 g_bootfile="grubx64.efi"  # Default for non-secure boot
 g_descfile=comment.txt
-g_output_file_list=()
+g_outputfile="/tmp/ts_restore.out"
 backuppath="/mnt/backup"
 backupdir="ts"
 restorepath="/mnt/restore"
@@ -390,6 +390,10 @@ if [ ! -e $restoredevice ]; then
   exit 2
 fi
 
+# Initialize the log file
+echo &> "$g_outputfile"
+
+# Mount the devices
 mount_device_at_path "$restoredevice" "$restorepath"
 mount_device_at_path "$backupdevice" "$backuppath" "$backupdir"
 
