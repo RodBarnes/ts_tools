@@ -66,7 +66,7 @@ function unmount_device_at_path {
   local mount=$1
 
   # Unmount if mounted
-  if [ -d "$mount/fs" ]; then
+  if [ -d "$mount" ]; then
     sudo umount $mount &> /dev/null
     if [ $? -ne 0 ]; then
       printx "Unable to locate or unmount '$mount'." >&2
@@ -395,7 +395,6 @@ fi
 # Initialize the log file
 echo &> "$g_outputfile"
 
-# Mount the devices
 mount_device_at_path "$restoredevice" "$restorepath"
 mount_device_at_path "$backupdevice" "$backuppath" "$backupdir"
 
@@ -453,7 +452,7 @@ if [ ! -z $snapshotname ]; then
     echo "Performing dry-run restore of '$snapshotname' to '$restoredevice'..."
     dryrun_snapshot "$backuppath/$backupdir" "$snapshotname" "$restorepath"
   fi
-  echo "Details of the operation can be viewed in these files found in /tmp: $g_output_file_list"
+  echo "Details of the operation can be viewed in these files found in /tmp: $g_outputfile"
 else
   echo "Operation cancelled."
 fi

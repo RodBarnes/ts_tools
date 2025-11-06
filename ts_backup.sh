@@ -53,7 +53,7 @@ function unmount_device_at_path {
   local mount=$1
 
   # Unmount if mounted
-  if [ -d "$mount/fs" ]; then
+  if [ -d "$mount" ]; then
     sudo umount $mount &> /dev/null
     if [ $? -ne 0 ]; then
       printx "Unable to locate or unmount '$mount'." >&2
@@ -189,3 +189,4 @@ verify_available_space "$backupdevice" "$minimum_space"
 create_snapshot "$backupdevice" "$backuppath/$backupdir" "$snapshotname" "$comment" "$dryrun"
 
 echo "✅ Backup complete: $backuppath/$backupdir/$snapshotname"
+echo "Details of the operation can be viewed in these files found in /tmp: $g_outputfile"
