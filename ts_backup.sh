@@ -63,12 +63,13 @@ function unmount_device_at_path {
 }
 
 function verify_available_space {
-  local device=$1 minspace=$2
+  local device=$1 path=2 minspace=$3
 
   # Check how much space is left
-  space=$(df /mnt/backup | sed -n '2p;')
-  IFS=' ' read dev size used avail pcent mount <<< $space
-  if [[ $avail -lt $minspace ]]; then
+  line=$(df "$path" -BG | sed -n '2p;')
+  IFS=' ' read dev size used avail pcent mount <<< $line
+  space=${avail%G}
+  if [[ $space -lt $minspace ]]; then
     printx "The backupdevice '$device' has less only $avail space left of the total $size." >&2
     read -p "Do you want to proceed? (y/N) " yn
     if [[ $yn != "y" && $yn != "Y" ]]; then
@@ -84,6 +85,11 @@ function verify_available_space {
 
 function create_snapshot {
   local device=$1 path=$2 name=$3 note=$4 dry=$5 perm=$6
+
+  if [[ ! -z $perm ]]; then
+    echo "The backup device does not support permmissions or ownership." >&2
+    echo "The rsync will be performed without attempting to set these options." >&2
+  fi
 
   # Create the snapshot
   if [ -n "$(find $path -mindepth 1 -maxdepth 1 -type f -o -type d 2> /dev/null)" ]; then
@@ -120,9 +126,10 @@ function check_rsync_perm {
   local path=$1
 
   local fstype=$(lsblk --output MOUNTPOINTS,FSTYPE | grep "$path" | tr -s ' ' | cut -d ' ' -f2)
-  echo "Backup device type is: $fstype"  &>> "$g_outputfile" 
+  echo "Backup device type is: $fstype" &>> "$g_outputfile" 
   case "$fstype" in
     "vfat"|"exfat")
+      echo "NOTE: The backup device '$backupdevice' is $fstype." >&2
       noperm="--no-perms --no-owner"
       ;;
     "ntfs")
@@ -152,8 +159,7 @@ g_outputfile="/tmp/ts_backup.out"
 backuppath=/mnt/backup
 backupdir="ts"
 snapshotname=$(date +%Y-%m-%d-%H%M%S)
-minimum_space=5000000
-
+minimum_space=5 # Amount in GB
 
 trap 'unmount_device_at_path "$backuppath"' EXIT
 
@@ -220,14 +226,8 @@ fi
 echo &> "$g_outputfile"
 
 mount_device_at_path  "$backupdevice" "$backuppath" "$backupdir"
-verify_available_space "$backupdevice" "$minimum_space"
+verify_available_space "$backupdevice" "$backuppath" "$minimum_space"
 perm_opt=$(check_rsync_perm "$backuppath")
-
-if [ ! -z perm_opt ]; then
-  echo "NOTE: The backup device '$backupdevice' does not support permmissions or ownership."
-  echo "The rsync will be performed without attempting to set these options."
-fi
-
 create_snapshot "$backupdevice" "$backuppath/$backupdir" "$snapshotname" "$comment" "$dryrun" "$perm_opt"
 
 echo "✅ Backup complete: $backuppath/$backupdir/$snapshotname"
