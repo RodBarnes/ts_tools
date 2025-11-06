@@ -170,8 +170,11 @@ if [[ "$EUID" != 0 ]]; then
 fi
 
 mount_device_at_path "$backupdevice" "$backuppath" "$backupdir"
-snapshotname=$(select_snapshot "$backupdevice" "$backuppath/$backupdir")
-
-if [ ! -z $snapshotname ]; then
-  delete_snapshot "$backuppath/$backupdir" "$snapshotname"
-fi
+while true; do
+  snapshotname=$(select_snapshot "$backupdevice" "$backuppath/$backupdir")
+  if [ ! -z $snapshotname ]; then
+    delete_snapshot "$backuppath/$backupdir" "$snapshotname"
+  else
+    exit
+  fi
+done
