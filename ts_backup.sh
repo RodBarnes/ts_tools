@@ -91,11 +91,14 @@ function create_snapshot {
     echo "The rsync will be performed without attempting to set these options." >&2
   fi
 
+  # Get the name of the most recent backup
+  local latest=$(ls -1 "$path" | grep -E '^[0-9]{8}_[0-9]{6}$' | sort -r | sed -n '1p;')
+ 
   # Create the snapshot
-  if [ -n "$(find $path -mindepth 1 -maxdepth 1 -type f -o -type d 2> /dev/null)" ]; then
+  if [ ! -z $latest ]; then
     echo "Creating incremental snapshot on '$device'..." >&2
     # Snapshots exist so create incremental snapshot referencing the latest
-    sudo rsync -aAX $dry $perm --delete --link-dest=../latest --exclude-from=/etc/ts_excludes / "$path/$name/" &>> "$g_outputfile"
+    sudo rsync -aAX $dry $perm --delete --link-dest="$backuppath/$latest" --exclude-from=/etc/ts_excludes / "$path/$name/" &>> "$g_outputfile"
   else
     echo "Creating full snapshot on '$device'..." >&2
     # This is the first snapshot so create full snapshot
@@ -158,7 +161,7 @@ g_descfile=comment.txt
 g_outputfile="/tmp/ts_backup.out"
 backuppath=/mnt/backup
 backupdir="ts"
-snapshotname=$(date +%Y-%m-%d-%H%M%S)
+snapshotname=$(date +%Y%m%d_%H%M%S)
 minimum_space=5 # Amount in GB
 
 trap 'unmount_device_at_path "$backuppath"' EXIT
