@@ -74,22 +74,26 @@ function verify_available_space {
     if [[ $yn != "y" && $yn != "Y" ]]; then
       echo "Operation cancelled." >&2
       exit
+    else
+      echo "User acknowledged that backup device has less than $avail space but proceeded." &>> "$g_outputfile"
     fi
+  else
+    echo "Backup device has $avail or more space avaiable; proceeding with backup." &>> "$g_outputfile"
   fi
 }
 
 function create_snapshot {
-  local device=$1 path=$2 name=$3 note=$4 dry=$5
+  local device=$1 path=$2 name=$3 note=$4 dry=$5 perm=$6
 
   # Create the snapshot
   if [ -n "$(find $path -mindepth 1 -maxdepth 1 -type f -o -type d 2> /dev/null)" ]; then
     echo "Creating incremental snapshot on '$device'..." >&2
     # Snapshots exist so create incremental snapshot referencing the latest
-    sudo rsync -aAX $dry --delete --link-dest=../latest --exclude-from=/etc/ts_excludes / "$path/$name/"
+    sudo rsync -aAX $dry $perm --delete --link-dest=../latest --exclude-from=/etc/ts_excludes / "$path/$name/" &>> "$g_outputfile"
   else
     echo "Creating full snapshot on '$device'..." >&2
     # This is the first snapshot so create full snapshot
-    sudo rsync -aAX $dry --delete --exclude-from=/etc/ts_excludes / "$path/$name/"
+    sudo rsync -aAX $dry $perm --delete --exclude-from=/etc/ts_excludes / "$path/$name/" &>> "$g_outputfile"
   fi
 
   if [ -z $dry ]; then
@@ -112,11 +116,39 @@ function create_snapshot {
   fi
 }
 
+function check_rsync_perm {
+  local path=$1
+
+  local fstype=$(lsblk --output MOUNTPOINTS,FSTYPE | grep "$path" | tr -s ' ' | cut -d ' ' -f2)
+  echo "Backup device type is: $fstype"  &>> "$g_outputfile" 
+  case "$fstype" in
+    "vfat"|"exfat")
+      noperm="--no-perms --no-owner"
+      ;;
+    "ntfs")
+      sudo pgrep -a ntfs-3g | grep "$path" | grep -q "permissions" 
+      if [ $? -ne 0 ]; then
+          # Permissions not found
+          noperm="--no-perms --no-owner"
+      fi
+      ;;
+    *)
+      ;;
+  esac
+
+  if [ ! -z noperm ]; then
+    echo "Using options '$noperm' to prevent attempt to change ownership or permissions." &>> "$g_outputfile"
+  fi
+
+  echo $noperm
+}
+
 # --------------------
 # ------- MAIN -------
 # --------------------
 
 g_descfile=comment.txt
+g_outputfile="/tmp/ts_backup.out"
 backuppath=/mnt/backup
 backupdir="ts"
 snapshotname=$(date +%Y-%m-%d-%H%M%S)
@@ -184,9 +216,19 @@ if [[ "$EUID" != 0 ]]; then
   exit 1
 fi
 
+# Initialize the log file
+echo &> "$g_outputfile"
+
 mount_device_at_path  "$backupdevice" "$backuppath" "$backupdir"
 verify_available_space "$backupdevice" "$minimum_space"
-create_snapshot "$backupdevice" "$backuppath/$backupdir" "$snapshotname" "$comment" "$dryrun"
+perm_opt=$(check_rsync_perm "$backuppath")
+
+if [ ! -z perm_opt ]; then
+  echo "NOTE: The backup device '$backupdevice' does not support permmissions or ownership."
+  echo "The rsync will be performed without attempting to set these options."
+fi
+
+create_snapshot "$backupdevice" "$backuppath/$backupdir" "$snapshotname" "$comment" "$dryrun" "$perm_opt"
 
 echo "✅ Backup complete: $backuppath/$backupdir/$snapshotname"
 echo "Details of the operation can be viewed in these files found in /tmp: $g_outputfile"
