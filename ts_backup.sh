@@ -93,30 +93,29 @@ function create_snapshot {
 
   # Get the name of the most recent backup
   local latest=$(ls -1 "$path" | grep -E '^[0-9]{8}_[0-9]{6}$' | sort -r | sed -n '1p;')
- 
+  local type
+
   # Create the snapshot
   if [ ! -z $latest ]; then
     echo "Creating incremental snapshot on '$device'..." >&2
+    type="incr"
     # Snapshots exist so create incremental snapshot referencing the latest
     sudo rsync -aAX $dry $perm --delete --link-dest="$backuppath/$latest" --exclude-from=/etc/ts_excludes / "$path/$name/" &>> "$g_outputfile"
   else
     echo "Creating full snapshot on '$device'..." >&2
+    type="full"
     # This is the first snapshot so create full snapshot
     sudo rsync -aAX $dry $perm --delete --exclude-from=/etc/ts_excludes / "$path/$name/" &>> "$g_outputfile"
   fi
 
   if [ -z $dry ]; then
-    # This was NOT a dry run so...
-    # Update "latest"
-    ln -sfn $name $path/latest
-
     # Use a default comment if one was not provided
     if [ -z "$note" ]; then
       note="<no desc>"
     fi
 
     # Create comment in the snapshot directory
-    echo "($(sudo du -sh $path/$name | awk '{print $1}')) $note" > "$path/$name/$g_descfile"
+    echo "($type $(sudo du -sh $path/$name | awk '{print $1}')) $note" > "$path/$name/$g_descfile"
 
     # Done
     echo "The snapshot '$name' was successfully completed." >&2
