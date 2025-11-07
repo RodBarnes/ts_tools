@@ -34,7 +34,7 @@ list_snapshots() {
   if [ ${#snapshots[@]} -eq 0 ]; then
     printx "There are no backups on $device" >&2
   else
-    printx "Snapshot files on $device" >&2
+    echo "Snapshot files on $device" >&2
     for snapshot in "${snapshots[@]}"; do
       printf "$snapshot\n" >&2
     done
@@ -52,21 +52,21 @@ backupdir="ts"
 trap 'unmount_device_at_path "$backuppath"' EXIT
 
 # Get the arguments
-uuid_regex="^\S{8}-\S{4}-\S{4}-\S{4}-\S{12}$"
 if [ $# -ge 1 ]; then
   arg="$1"
   shift 1
-  if [[ "$arg" =~ "/dev/" ]]; then
-    backupdevice="$arg"
-  elif [[ "$arg" =~ $uuid_regex ]]; then
-    backupdevice="UUID=$arg"
-  else
-    # Assume it is a label
-    backupdevice="LABEL=$arg"
+  device="${arg#/dev/}" # in case it is a device designator
+  backupdevice="/dev/$(lsblk -ln -o NAME,UUID,PARTUUID,LABEL | grep "$device" | tr -s ' ' | cut -d ' ' -f1)"
+  if [ -z $backupdevice ]; then
+    printx "No valid device was found for '$device'."
+    exit
   fi
 else
-  show_syntax >&2
-  exit 1
+  show_syntax
+fi
+
+if [ -z $backupdevice ]; then
+  show_syntax
 fi
 
 if [[ "$EUID" != 0 ]]; then

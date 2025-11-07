@@ -150,21 +150,21 @@ while true; do
   esac
 done
 
-uuid_regex="^\S{8}-\S{4}-\S{4}-\S{4}-\S{12}$"
 if [ $# -ge 1 ]; then
   arg="$1"
   shift 1
-  if [[ "$arg" =~ "/dev/" ]]; then
-    backupdevice="$arg"
-  elif [[ "$arg" =~ $uuid_regex ]]; then
-    backupdevice="UUID=$arg"
-  else
-    # Assume it is a label
-    backupdevice="LABEL=$arg"
+  device="${arg#/dev/}" # in case it is a device designator
+  backupdevice="/dev/$(lsblk -ln -o NAME,UUID,PARTUUID,LABEL | grep "$device" | tr -s ' ' | cut -d ' ' -f1)"
+  if [ -z $backupdevice ]; then
+    printx "No valid device was found for '$device'."
+    exit
   fi
 else
-  show_syntax >&2
-  exit 1
+  show_syntax
+fi
+
+if [ -z $backupdevice ]; then
+  show_syntax
 fi
 
 # echo "Device:$backupdevice"
