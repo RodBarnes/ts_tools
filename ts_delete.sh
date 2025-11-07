@@ -5,18 +5,9 @@
 
 # NOTE: This script expects to find the listed mountpoints.  If not present, it will fail.
 
-source /usr/local/lib/colors
+source ts_functions.sh
 
-function printx {
-  printf "${YELLOW}$1${NOCOLOR}\n"
-}
-
-function readx {
-  printf "${YELLOW}$1${NOCOLOR}"
-  read -p "" $2
-}
-
-function show_syntax {
+show_syntax() {
   echo "Delete a snapshot created with ts_backup."
   echo "Syntax: $(basename $0) <backup_device>"
   echo "Where:  <backup_device> can be a backupdevice designator (e.g., /dev/sdb6), a UUID, or a filesystem LABEL."
@@ -24,49 +15,7 @@ function show_syntax {
   exit  
 }
 
-function mount_device_at_path {
-  local device=$1 mount=$2 dir=$3
-  
-  # Ensure mount point exists
-  if [ ! -d $mount ]; then
-    sudo mkdir -p $mount &> /dev/null
-    if [ $? -ne 0 ]; then
-      printx "Unable to locate or create '$mount'." >&2
-      exit 2
-    fi
-  fi
-
-  # Attempt to mount the device
-  sudo mount $device $mount &> /dev/null
-  if [ $? -ne 0 ]; then
-    printx "Unable to mount the backup backupdevice '$device'." >&2
-    exit 2
-  fi
-
-  if [ ! -z $dir ] && [ ! -d "$mount/$dir" ]; then
-    # Ensure the directory structure exists
-    sudo mkdir "$mount/$dir" &> /dev/null
-    if [ $? -ne 0 ]; then
-      printx "Unable to locate or create '$mount/$dir'." >&2
-      exit 2
-    fi
-  fi
-}
-
-function unmount_device_at_path {
-  local mount=$1
-
-  # Unmount if mounted
-  if [ -d "$mount" ]; then
-    sudo umount $mount &> /dev/null
-    if [ $? -ne 0 ]; then
-      printx "Unable to locate or unmount '$mount'." >&2
-      exit 2
-    fi
-  fi
-}
-
-function select_snapshot {
+select_snapshot() {
   local device=$1 path=$2
   # Get the snapshots
   
@@ -113,7 +62,7 @@ function select_snapshot {
   echo $selected
 }
 
-function delete_snapshot {
+delete_snapshot() {
   local path=$1 name=$2
 
   printx "This will completely DELETE the snapshot '$name' and is not recoverable." >&2

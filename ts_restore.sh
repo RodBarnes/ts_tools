@@ -11,16 +11,7 @@
 
 # Grok conversation URL: https://grok.com/c/61141f41-643d-4a52-93c1-a0e58cd443d7
 
-source /usr/local/lib/colors
-
-function printx {
-  printf "${YELLOW}$1${NOCOLOR}\n"
-}
-
-function readx {
-  printf "${YELLOW}$1${NOCOLOR}"
-  read -p "" $2
-}
+source ts_functions.sh
 
 function show_syntax {
   echo "Restore a snapshot created with ts_backup; emulates TimeShift."
@@ -33,49 +24,7 @@ function show_syntax {
   exit  
 }
 
-function mount_device_at_path {
-  local device=$1 mount=$2 dir=$3
-  
-  # Ensure mount point exists
-  if [ ! -d $mount ]; then
-    sudo mkdir -p $mount &> /dev/null
-    if [ $? -ne 0 ]; then
-      printx "Unable to locate or create '$mount'." >&2
-      exit 2
-    fi
-  fi
-
-  # Attempt to mount the device
-  sudo mount $device $mount &> /dev/null
-  if [ $? -ne 0 ]; then
-    printx "Unable to mount the backup backupdevice '$device'." >&2
-    exit 2
-  fi
-
-  if [ ! -z $dir ] && [ ! -d "$mount/$dir" ]; then
-    # Ensure the directory structure exists
-    sudo mkdir "$mount/$dir" &> /dev/null
-    if [ $? -ne 0 ]; then
-      printx "Unable to locate or create '$mount/$dir'." >&2
-      exit 2
-    fi
-  fi
-}
-
-function unmount_device_at_path {
-  local mount=$1
-
-  # Unmount if mounted
-  if [ -d "$mount" ]; then
-    sudo umount $mount &> /dev/null
-    if [ $? -ne 0 ]; then
-      printx "Unable to locate or unmount '$mount'." >&2
-      exit 2
-    fi
-  fi
-}
-
-function select_snapshot {
+select_snapshot() {
   local path=$1
 
   local snapshots=() comment count name
@@ -117,7 +66,7 @@ function select_snapshot {
   echo "$name"
 }
 
-function get_bootfile {
+get_bootfile() {
   local restpath=$1
 
   local setupmode
@@ -158,7 +107,7 @@ function get_bootfile {
   fi
 }
 
-function validate_boot_config {
+validate_boot_config() {
   local restdev=$1 restpath=$2
 
   local boot_valid=1
@@ -204,7 +153,7 @@ function validate_boot_config {
   fi
 }
 
-function build_boot {
+build_boot() {
   local restdev=$1 restpath=$2
 
   local osid=$(grep "^ID=" "$restpath/etc/os-release" | cut -d'=' -f2 | tr -d '"')
@@ -267,7 +216,7 @@ function build_boot {
   sudo umount "$restpath/boot/efi" "$restpath/dev/pts" "$restpath/dev" "$restpath/proc" "$restpath/sys"
 }
 
-function restore_snapshot {
+restore_snapshot() {
   local backpath=$1 name=$2 restpath=$3
 
   local excludespathname="/etc/ts_excludes"
@@ -288,7 +237,7 @@ function restore_snapshot {
   fi
 }
 
-function dryrun_snapshot {
+dryrun_snapshot() {
   local backpath=$1 name=$2 restpath=$3
 
   local excludespathname="/etc/ts_excludes"

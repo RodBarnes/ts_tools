@@ -4,13 +4,9 @@
 
 # NOTE: This script expects to find the listed mountpoints.  If not present, it will create them.
 
-source /usr/local/lib/colors
+source ts_functions.sh
 
-function printx {
-  printf "${YELLOW}$1${NOCOLOR}\n"
-}
-
-function show_syntax {
+show_syntax() {
   echo "Create a TimeShift-like snapshot of the system file excluding those identified in /etc/backup-excludes."
   echo "Syntax: $(basename $0) <backup_device> [-d|--dry-run] [-c|--comment comment]"
   echo "Where:  <backup_device> can be a backupdevice designator (e.g., /dev/sdb6), a UUID, or a filesystem LABEL."
@@ -20,49 +16,7 @@ function show_syntax {
   exit
 }
 
-function mount_device_at_path {
-  local device=$1 mount=$2 dir=$3
-  
-  # Ensure mount point exists
-  if [ ! -d $mount ]; then
-    sudo mkdir -p $mount &> /dev/null
-    if [ $? -ne 0 ]; then
-      printx "Unable to locate or create '$mount'." >&2
-      exit 2
-    fi
-  fi
-
-  # Attempt to mount the device
-  sudo mount $device $mount &> /dev/null
-  if [ $? -ne 0 ]; then
-    printx "Unable to mount the backup backupdevice '$device'." >&2
-    exit 2
-  fi
-
-  if [ ! -z $dir ] && [ ! -d "$mount/$dir" ]; then
-    # Ensure the directory structure exists
-    sudo mkdir "$mount/$dir" &> /dev/null
-    if [ $? -ne 0 ]; then
-      printx "Unable to locate or create '$mount/$dir'." >&2
-      exit 2
-    fi
-  fi
-}
-
-function unmount_device_at_path {
-  local mount=$1
-
-  # Unmount if mounted
-  if [ -d "$mount" ]; then
-    sudo umount $mount &> /dev/null
-    if [ $? -ne 0 ]; then
-      printx "Unable to locate or unmount '$mount'." >&2
-      exit 2
-    fi
-  fi
-}
-
-function verify_available_space {
+verify_available_space() {
   local device=$1 path=2 minspace=$3
 
   # Check how much space is left
@@ -83,7 +37,7 @@ function verify_available_space {
   fi
 }
 
-function create_snapshot {
+create_snapshot() {
   local device=$1 path=$2 name=$3 note=$4 dry=$5 perm=$6
 
   if [[ ! -z $perm ]]; then
@@ -124,7 +78,7 @@ function create_snapshot {
   fi
 }
 
-function check_rsync_perm {
+check_rsync_perm() {
   local path=$1
 
   local fstype=$(lsblk --output MOUNTPOINTS,FSTYPE | grep "$path" | tr -s ' ' | cut -d ' ' -f2)
