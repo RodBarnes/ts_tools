@@ -10,7 +10,7 @@ source ts_functions.sh
 show_syntax() {
   echo "Delete a snapshot created with ts_backup."
   echo "Syntax: $(basename $0) <backup_device>"
-  echo "Where:  <backup_device> can be a backupdevice designator (e.g., /dev/sdb6), a UUID, or a filesystem LABEL."
+  echo "Where:  <backup_device> can be a device designator (e.g., /dev/sdb6), a UUID, filesystem LABEL, or partition UUID"
   echo "NOTE:   Must be run as sudo."
   exit  
 }

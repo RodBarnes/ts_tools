@@ -16,7 +16,7 @@ source ts_functions.sh
 show_syntax() {
   echo "Restore a snapshot created with ts_backup; emulates TimeShift."
   echo "Syntax: $(basename $0) <backup_device> <restore_device> [-d|--dry-run] [-g|--grub-install boot_device] [-s:snapshot snapshotname]"
-  echo "Where:  <backup_device> and <restore_device> can be a device designator (e.g., /dev/sdb6), a UUID, or a filesystem LABEL."
+  echo "Where:  <backup_device> and <restore_device> can be a device designator (e.g., /dev/sdb6), a UUID, filesystem LABEL, or partition UUID"
   echo "        [-d|--dry-run] means to do a 'dry-run' test without actually creating the backup."
   echo "        [-g--grub-install boot_device] means to rebuild grub on the specified device; e.g., /dev/sda1."
   echo "        [-s|--snapshot snapshotname] is the name (timestamp) of the snapshot to restore -- if not present, a selection is presented."

@@ -9,7 +9,7 @@ source ts_functions.sh
 show_syntax() {
   echo "Create a TimeShift-like snapshot of the system file excluding those identified in /etc/backup-excludes."
   echo "Syntax: $(basename $0) <backup_device> [-d|--dry-run] [-c|--comment comment]"
-  echo "Where:  <backup_device> can be a backupdevice designator (e.g., /dev/sdb6), a UUID, or a filesystem LABEL."
+  echo "Where:  <backup_device> can be a device designator (e.g., /dev/sdb6), a UUID, filesystem LABEL, or partition UUID"
   echo "        [-d|--dry-run] means to do a 'dry-run' test without actually restoring the snapshot."
   echo "        [-c|--comment comment] is a quote-bounded comment for the snapshot"
   echo "NOTE:   Must be run as sudo."
