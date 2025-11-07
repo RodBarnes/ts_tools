@@ -13,7 +13,7 @@
 
 source ts_functions.sh
 
-function show_syntax {
+show_syntax() {
   echo "Restore a snapshot created with ts_backup; emulates TimeShift."
   echo "Syntax: $(basename $0) <backup_device> <restore_device> [-d|--dry-run] [-g|--grub-install boot_device] [-s:snapshot snapshotname]"
   echo "Where:  <backup_device> and <restore_device> can be a device designator (e.g., /dev/sdb6), a UUID, or a filesystem LABEL."
