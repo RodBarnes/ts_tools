@@ -20,23 +20,22 @@ list_snapshots() {
 
   # Get the snapshots
   local snapshots=() note name
-
+  local i=0
   while IFS= read -r name; do
+    if [ $i -eq 0 ]; then
+      echo "Snapshot files on $device" >&2
+    fi
     if [ -f "$path/$name/$g_descfile" ]; then
       note="$(cat $path/$name/$g_descfile)"
     else
       note="<no desc>"
     fi
-    snapshots+=("$name: $note")
-  done < <( find $path -mindepth 1 -maxdepth 1 -type d | sort -r | cut -d '/' -f5 )
+    echo "$name: $note" >&2
+    ((i++))
+  done < <( ls -1 "$path" )
 
-  if [ ${#snapshots[@]} -eq 0 ]; then
+  if [ $i -eq 0 ]; then
     printx "There are no backups on $device" >&2
-  else
-    echo "Snapshot files on $device" >&2
-    for snapshot in "${snapshots[@]}"; do
-      echo "$snapshot" >&2
-    done
   fi
 }
 
