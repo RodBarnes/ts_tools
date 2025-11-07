@@ -2,9 +2,7 @@
 
 # Create a snapshot using rsync command as done by TimeShift.
 
-# NOTE: This script expects to find the listed mountpoints.  If not present, it will create them.
-
-source ts_functions.sh
+source /usr/local/lib/ts_functions
 
 show_syntax() {
   echo "Create a TimeShift-like snapshot of the system file excluding those identified in /etc/backup-excludes."

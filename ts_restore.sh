@@ -1,17 +1,8 @@
 #!/usr/bin/env bash
 
-# Restore a backup using rsync command as done by TimeShift.
+# Restore a ts_backup
 
-# Error codes:
-# 1 -- not running as sudo
-# 2 -- device issues
-# 3 -- operation failure
-
-# NOTE: This script expects to find the listed mountpoints.  If not present, they will be created.
-
-# Grok conversation URL: https://grok.com/c/61141f41-643d-4a52-93c1-a0e58cd443d7
-
-source ts_functions.sh
+source /usr/local/lib/ts_functions
 
 show_syntax() {
   echo "Restore a snapshot created with ts_backup; emulates TimeShift."

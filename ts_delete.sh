@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
 
-# List the snapshots found on the specified backupdevice and allow selecting to delete.
-# One of the following is required parameter: <backupdevice>, <label>, or <uuid> for mounting the backupdevice
+# Delete ts_backups
 
-# NOTE: This script expects to find the listed mountpoints.  If not present, it will fail.
-
-source ts_functions.sh
+source /usr/local/lib/ts_functions
 
 show_syntax() {
   echo "Delete a snapshot created with ts_backup."
