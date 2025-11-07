@@ -85,6 +85,7 @@ select_snapshot() {
         case ${selection} in
           "Cancel")
             # If the user decides to cancel...
+            echo "Operation cancelled." >&2
             break
             ;;
           *)

@@ -179,19 +179,26 @@ restore_snapshot() {
 
   local excludespathname="/etc/ts_excludes"
 
-  echo "---${FUNCNAME}---" &>> "$g_outputfile"
+  printx "This will completely OVERWRITE the operating system on '$restoredevice'."
+  readx "Are you sure you want to proceed? (y/N) " yn
+  if [[ $yn != "y" && $yn != "Y" ]]; then
+    echo "Operation cancelled."
+    exit
+  else
+    echo "Restoring '$snapshotname' to '$restoredevice'..."
+    echo "---${FUNCNAME}---" &>> "$g_outputfile"
+    # Restore the snapshot
+    echo rsync -aAX --delete --verbose "--exclude-from=$excludespathname" "$backpath/$name/" "$restpath/" &>> "$g_outputfile"
+    sudo rsync -aAX --delete --verbose "--exclude-from=$excludespathname" "$backpath/$name/" "$restpath/" &>> "$g_outputfile"
+    if [ $? -ne 0 ]; then
+      printx "Something went wrong with the restore.  Check '$g_outputfile' for details." >&2
+      exit 3
+    fi
 
-  # Restore the snapshot
-  echo rsync -aAX --delete --verbose "--exclude-from=$excludespathname" "$backpath/$name/" "$restpath/" &>> "$g_outputfile"
-  sudo rsync -aAX --delete --verbose "--exclude-from=$excludespathname" "$backpath/$name/" "$restpath/" &>> "$g_outputfile"
-  if [ $? -ne 0 ]; then
-    printx "Something went wrong with the restore.  Check '$g_outputfile' for details." >&2
-    exit 3
-  fi
-
-  if [ -f "$backpath/$g_descfile" ]; then
-    # Delete the description file from the target
-    sudo rm "$backpath/$g_descfile"
+    if [ -f "$backpath/$g_descfile" ]; then
+      # Delete the description file from the target
+      sudo rm "$backpath/$g_descfile"
+    fi
   fi
 }
 
@@ -298,6 +305,11 @@ echo &> "$g_outputfile"
 mount_device_at_path "$restoredevice" "$restorepath"
 mount_device_at_path "$backupdevice" "$backuppath" "$backupdir"
 
+if [ ! -z $snapshotname ] && [ ! -d $backuppath/$backupdir/$snapshotname ]; then
+  printx "There is no snapshot '$snapshotname' on '$backupdevice'."
+  unset snapshotname
+fi
+
 # Since a snapshot was not specified, present a list for selection
 if [ -z $snapshotname ]; then
   snapshotname=$(select_snapshot "$backupdevice" "$backuppath/$backupdir")
@@ -305,13 +317,6 @@ fi
 
 if [ ! -z $snapshotname ]; then
   if [ -z $dryrun ]; then
-    printx "This will completely OVERWRITE the operating system on '$restoredevice'."
-    readx "Are you sure you want to proceed? (y/N) " yn
-    if [[ $yn != "y" && $yn != "Y" ]]; then
-      echo "Operation cancelled."
-      exit
-    fi
-    echo "Restoring '$snapshotname' to '$restoredevice'..."
     restore_snapshot "$backuppath/$backupdir" "$snapshotname" "$restorepath"
 
     # echo "Before get_bootfile..."
@@ -353,6 +358,4 @@ if [ ! -z $snapshotname ]; then
     dryrun_snapshot "$backuppath/$backupdir" "$snapshotname" "$restorepath"
   fi
   echo "Details of the operation can be viewed in these files found in /tmp: $g_outputfile"
-else
-  echo "Operation cancelled."
 fi

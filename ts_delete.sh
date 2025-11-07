@@ -23,8 +23,8 @@ delete_snapshot() {
   if [[ $yn != "y" && $yn != "Y" ]]; then
     echo "Operation cancelled." >&2
   else
+    echo "Deleting '$name'." >&2
     sudo rm -Rf $path/$name
-    echo "'$name' has been deleted." >&2
   fi
 }
 
