@@ -181,4 +181,4 @@ perm_opt=$(check_rsync_perm "$g_backuppath")
 create_snapshot "$backupdevice" "$g_backuppath/$g_backupdir" "$snapshotname" "$comment" "$dryrun" "$perm_opt"
 
 echo "✅ Backup complete: $g_backuppath/$g_backupdir/$snapshotname"
-echo "Details of the operation can be viewed in these files found in /tmp: $g_outputfile"
+echo "Details of the operation can be viewed in the file /tmp/$g_outputfile"

@@ -343,5 +343,5 @@ if [ ! -z $snapshotname ]; then
     echo "Performing dry-run restore of '$snapshotname' to '$restoredevice'..."
     dryrun_snapshot "$g_backuppath/$g_backupdir" "$snapshotname" "$restorepath"
   fi
-  echo "Details of the operation can be viewed in these files found in /tmp: $g_outputfile"
+  echo "Details of the operation can be viewed in the file /tmp/$g_outputfile"
 fi
