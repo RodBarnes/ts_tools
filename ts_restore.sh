@@ -209,14 +209,9 @@ dryrun_snapshot() {
 # ------- MAIN -------
 # --------------------
 
-g_bootfile="grubx64.efi"  # Default for non-secure boot
-g_descfile=comment.txt
-g_outputfile="/tmp/ts_restore.out"
-backuppath="/mnt/backup"
-backupdir="ts"
 restorepath="/mnt/restore"
 
-trap 'unmount_device_at_path "$backuppath"; unmount_device_at_path "$restorepath"' EXIT
+trap 'unmount_device_at_path "$g_backuppath"; unmount_device_at_path "$restorepath"' EXIT
 
 # Get the arguments
 arg_short=dg:s:
@@ -294,21 +289,21 @@ fi
 echo &> "$g_outputfile"
 
 mount_device_at_path "$restoredevice" "$restorepath"
-mount_device_at_path "$backupdevice" "$backuppath" "$backupdir"
+mount_device_at_path "$backupdevice" "$g_backuppath" "$g_backupdir"
 
-if [ ! -z $snapshotname ] && [ ! -d $backuppath/$backupdir/$snapshotname ]; then
+if [ ! -z $snapshotname ] && [ ! -d $g_backuppath/$g_backupdir/$snapshotname ]; then
   printx "There is no snapshot '$snapshotname' on '$backupdevice'."
   unset snapshotname
 fi
 
 # Since a snapshot was not specified, present a list for selection
 if [ -z $snapshotname ]; then
-  snapshotname=$(select_snapshot "$backupdevice" "$backuppath/$backupdir")
+  snapshotname=$(select_snapshot "$backupdevice" "$g_backuppath/$g_backupdir")
 fi
 
 if [ ! -z $snapshotname ]; then
   if [ -z $dryrun ]; then
-    restore_snapshot "$backuppath/$backupdir" "$snapshotname" "$restorepath"
+    restore_snapshot "$g_backuppath/$g_backupdir" "$snapshotname" "$restorepath"
 
     # echo "Before get_bootfile..."
     # echo "restoredevice=$restoredevice"
@@ -342,11 +337,11 @@ if [ ! -z $snapshotname ]; then
     # echo
 
     # Done
-    echo "✅ Restore complete: $backuppath/$backupdir/$snapshotname"
+    echo "✅ Restore complete: $g_backuppath/$g_backupdir/$snapshotname"
     echo "The system may now be rebooted into the restored partition."
   else
     echo "Performing dry-run restore of '$snapshotname' to '$restoredevice'..."
-    dryrun_snapshot "$backuppath/$backupdir" "$snapshotname" "$restorepath"
+    dryrun_snapshot "$g_backuppath/$g_backupdir" "$snapshotname" "$restorepath"
   fi
   echo "Details of the operation can be viewed in these files found in /tmp: $g_outputfile"
 fi

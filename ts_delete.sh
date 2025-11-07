@@ -29,11 +29,7 @@ delete_snapshot() {
 # ------- MAIN -------
 # --------------------
 
-g_descfile=comment.txt
-backuppath=/mnt/backup
-backupdir="ts"
-
-trap 'unmount_device_at_path "$backuppath"' EXIT
+trap 'unmount_device_at_path "$g_backuppath"' EXIT
 
 # Get the arguments
 if [ $# -ge 1 ]; then
@@ -58,11 +54,11 @@ if [[ "$EUID" != 0 ]]; then
   exit 1
 fi
 
-mount_device_at_path "$backupdevice" "$backuppath" "$backupdir"
+mount_device_at_path "$backupdevice" "$g_backuppath" "$g_backupdir"
 while true; do
-  snapshotname=$(select_snapshot "$backupdevice" "$backuppath/$backupdir")
+  snapshotname=$(select_snapshot "$backupdevice" "$g_backuppath/$g_backupdir")
   if [ ! -z $snapshotname ]; then
-    delete_snapshot "$backuppath/$backupdir" "$snapshotname"
+    delete_snapshot "$g_backuppath/$g_backupdir" "$snapshotname"
   else
     exit
   fi

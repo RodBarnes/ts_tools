@@ -40,11 +40,7 @@ list_snapshots() {
 # ------- MAIN -------
 # --------------------
 
-g_descfile=comment.txt
-backuppath=/mnt/backup
-backupdir="ts"
-
-trap 'unmount_device_at_path "$backuppath"' EXIT
+trap 'unmount_device_at_path "$g_backuppath"' EXIT
 
 # Get the arguments
 if [ $# -ge 1 ]; then
@@ -69,6 +65,6 @@ if [[ "$EUID" != 0 ]]; then
   exit 1
 fi
 
-mount_device_at_path "$backupdevice" "$backuppath" "$backupdir"
-list_snapshots "$backupdevice" "$backuppath/$backupdir"
+mount_device_at_path "$backupdevice" "$g_backuppath" "$g_backupdir"
+list_snapshots "$backupdevice" "$g_backuppath/$g_backupdir"
 

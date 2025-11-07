@@ -52,7 +52,7 @@ create_snapshot() {
     echo "Creating incremental snapshot on '$device'..." >&2
     type="incr"
     # Snapshots exist so create incremental snapshot referencing the latest
-    sudo rsync -aAX $dry $perm --delete --link-dest="$backuppath/$latest" --exclude-from=/etc/ts_excludes / "$path/$name/" &>> "$g_outputfile"
+    sudo rsync -aAX $dry $perm --delete --link-dest="$g_backuppath/$latest" --exclude-from=/etc/ts_excludes / "$path/$name/" &>> "$g_outputfile"
   else
     echo "Creating full snapshot on '$device'..." >&2
     type="full"
@@ -108,14 +108,10 @@ check_rsync_perm() {
 # ------- MAIN -------
 # --------------------
 
-g_descfile=comment.txt
-g_outputfile="/tmp/ts_backup.out"
-backuppath=/mnt/backup
-backupdir="ts"
 snapshotname=$(date +%Y%m%d_%H%M%S)
 minimum_space=5 # Amount in GB
 
-trap 'unmount_device_at_path "$backuppath"' EXIT
+trap 'unmount_device_at_path "$g_backuppath"' EXIT
 
 # Get the arguments
 arg_short=dc:
@@ -179,10 +175,10 @@ fi
 # Initialize the log file
 echo &> "$g_outputfile"
 
-mount_device_at_path  "$backupdevice" "$backuppath" "$backupdir"
-verify_available_space "$backupdevice" "$backuppath" "$minimum_space"
-perm_opt=$(check_rsync_perm "$backuppath")
-create_snapshot "$backupdevice" "$backuppath/$backupdir" "$snapshotname" "$comment" "$dryrun" "$perm_opt"
+mount_device_at_path  "$backupdevice" "$g_backuppath" "$g_backupdir"
+verify_available_space "$backupdevice" "$g_backuppath" "$minimum_space"
+perm_opt=$(check_rsync_perm "$g_backuppath")
+create_snapshot "$backupdevice" "$g_backuppath/$g_backupdir" "$snapshotname" "$comment" "$dryrun" "$perm_opt"
 
-echo "✅ Backup complete: $backuppath/$backupdir/$snapshotname"
+echo "✅ Backup complete: $g_backuppath/$g_backupdir/$snapshotname"
 echo "Details of the operation can be viewed in these files found in /tmp: $g_outputfile"
