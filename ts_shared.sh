@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Collection of functions used by ts_tools
+# Shared code and variables for ts_tools
 
 source /usr/local/lib/common
 
