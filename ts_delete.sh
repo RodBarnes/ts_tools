@@ -2,7 +2,7 @@
 
 # Delete ts_backups
 
-source /usr/local/lib/ts_functions
+source /usr/local/lib/ts_shared
 
 show_syntax() {
   echo "Delete a snapshot created with ts_backup."
