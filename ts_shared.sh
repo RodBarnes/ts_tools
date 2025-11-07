@@ -4,11 +4,11 @@
 
 source /usr/local/lib/common
 
-g_bootfile="grubx64.efi"  # Default for non-secure boot
 g_descfile=comment.txt
 g_outputfile="/tmp/$0.out"
 g_backuppath=/mnt/backup
 g_backupdir="ts"
+g_bootfile="grubx64.efi"  # Default for non-secure boot
 
 select_snapshot() {
   local device=$1 path=$2
