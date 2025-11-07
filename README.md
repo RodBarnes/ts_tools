@@ -30,3 +30,5 @@ Restores a `ts_backup` snapshot from the `backup_device` to the `restore_device`
 
 NOTE: As written, `ts_restore` is intended to be used from a server's recovery partition to elmininate discrepancies by running on an active partition.  But it has been tested under both situations and works.  It should also work from a live image but that has not been tested.
 
+## ts_shared.sh
+Shared functions and variables used by `ts_tools`.
