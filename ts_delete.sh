@@ -116,8 +116,6 @@ function select_snapshot {
 function delete_snapshot {
   local path=$1 name=$2
 
-  local dircnt latest
-
   printx "This will completely DELETE the snapshot '$name' and is not recoverable." >&2
   readx "Are you sure you want to proceed? (y/N) " yn
   if [[ $yn != "y" && $yn != "Y" ]]; then
@@ -125,14 +123,6 @@ function delete_snapshot {
   else
     sudo rm -Rf $path/$name
     echo "'$name' has been deleted." >&2
-    dircnt=$(find "$path" -mindepth 1 -type d | wc -l)
-    if [[ $dircnt > 0 ]]; then
-      # There are still backups so fix the link to latest
-      latest=$(find "$path" -maxdepth 1 -type d -regextype posix-extended -regex '.*/[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{6}' | while read -r dir; do basename "$dir"; done | sort -r | head -n 1)
-      ln -sfn $latest $path/latest
-    else
-      sudo rm $path/latest
-    fi
   fi
 }
 
