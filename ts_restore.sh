@@ -24,48 +24,6 @@ function show_syntax {
   exit  
 }
 
-select_snapshot() {
-  local path=$1
-
-  local snapshots=() comment count name
-
-  # Get the snapshots and allow selecting
-  echo "Listing backup files..." >&2
-
-  while IFS= read -r backup; do
-    if [ -f "$path/$backup/$g_descfile" ]; then
-      comment=$(cat "$path/$backup/$g_descfile")
-    else
-      comment="<no desc>"
-    fi
-    snapshots+=("${backup}: $comment")
-  done < <( find $path -mindepth 1 -maxdepth 1 -type d | cut -d '/' -f5 )
-
-  # Get the count of options and increment to include the cancel
-  count="${#snapshots[@]}"
-  ((count++))
-
-  COLUMNS=1
-  select selection in "${snapshots[@]}" "Cancel"; do
-    if [[ "$REPLY" =~ ^[0-9]+$ && "$REPLY" -ge 1 && "$REPLY" -le $count ]]; then
-      case ${selection} in
-        "Cancel")
-          # If the user decides to cancel...
-          break
-          ;;
-        *)
-          name="${selection%%:*}"
-          break
-          ;;
-      esac
-    else
-      printx "Invalid selection. Please enter a number between 1 and $count." >&2
-    fi
-  done
-
-  echo "$name"
-}
-
 get_bootfile() {
   local restpath=$1
 
@@ -342,7 +300,7 @@ mount_device_at_path "$backupdevice" "$backuppath" "$backupdir"
 
 # Since a snapshot was not specified, present a list for selection
 if [ -z $snapshotname ]; then
-  snapshotname=$(select_snapshot "$backuppath/$backupdir")
+  snapshotname=$(select_snapshot "$backupdevice" "$backuppath/$backupdir")
 fi
 
 if [ ! -z $snapshotname ]; then

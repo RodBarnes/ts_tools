@@ -15,53 +15,6 @@ show_syntax() {
   exit  
 }
 
-select_snapshot() {
-  local device=$1 path=$2
-  # Get the snapshots
-  
-  local snapshots=() name note count selected
-
-  while IFS= read -r dirname; do
-    name=("${dirname}")
-    if [ -f "$path/$name/$g_descfile" ]; then
-      note="$(cat $path/$name/$g_descfile)"
-    else
-      note="<no desc>"
-    fi
-    snapshots+=("$name: $note")
-  done < <(find $path -mindepth 1 -maxdepth 1 -type d | sort -r | cut -d '/' -f5)
-
-  if [ ${#snapshots[@]} -eq 0 ]; then
-    printx "There are no backups on $device" >&2
-  else
-    printx "Snapshot files on $device" >&2
-    # Get the count of options and increment to include the cancel
-    count="${#snapshots[@]}"
-    ((count++))
-
-    COLUMNS=1
-    select selection in "${snapshots[@]}" "Cancel"; do
-      if [[ "$REPLY" =~ ^[0-9]+$ && "$REPLY" -ge 1 && "$REPLY" -le $count ]]; then
-        case ${selection} in
-          "Cancel")
-            # If the user decides to cancel...
-            echo "Operation cancelled." >&2
-            break
-            ;;
-          *)
-            selected=$(echo $selection | cut -d ':' -f1)
-            break
-            ;;
-        esac
-      else
-        printx "Invalid selection. Please enter a number between 1 and $count." >&2
-      fi
-    done
-  fi
-
-  echo $selected
-}
-
 delete_snapshot() {
   local path=$1 name=$2
 
