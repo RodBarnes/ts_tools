@@ -21,8 +21,7 @@ list_snapshots() {
   # Get the snapshots
   local snapshots=() note name
 
-  while IFS= read -r dirname; do
-    name=("${dirname}")
+  while IFS= read -r name; do
     if [ -f "$path/$name/$g_descfile" ]; then
       note="$(cat $path/$name/$g_descfile)"
     else
@@ -36,7 +35,7 @@ list_snapshots() {
   else
     echo "Snapshot files on $device" >&2
     for snapshot in "${snapshots[@]}"; do
-      printf "$snapshot\n" >&2
+      echo "$snapshot" >&2
     done
   fi
 }
