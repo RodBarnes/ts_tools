@@ -1,5 +1,7 @@
 # ts_tools
-A collection of `bash` scripts that emulate TimeShift backups on headless systems.  It requires `rsync` be installed.
+A collection of `bash` scripts that emulate TimeShift backups on headless systems.
+
+This requires `rsync` be installed as well as expecting the `display` and `device` libraries (found in the [tools](https://github.com/RodBarnes/tools) repository) be accessible; e.g., in `/usr/local/lib`.
 
 These are written for bash on debian-based distros.  They may work as is or should be easily modified to work on other distros.
 
