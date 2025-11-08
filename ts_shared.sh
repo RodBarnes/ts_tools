@@ -2,6 +2,7 @@
 
 # Shared code and variables for ts_tools
 
+source /usr/local/lib/colors
 source /usr/local/lib/common
 
 g_descfile=comment.txt
