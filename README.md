@@ -1,7 +1,7 @@
 # ts_tools
 A collection of `bash` scripts that emulate TimeShift backups on headless systems.
 
-This requires `rsync` be installed as well as expecting the `display` and `device` libraries (found in the [tools](https://github.com/RodBarnes/tools) repository) be accessible; e.g., in `/usr/local/lib`.
+This requires `rsync` be installed as well as expecting the `display` and `device` libraries (found in the [tools](https://github.com/RodBarnes/tools) repository) be in `/usr/local/lib`.
 
 These are written for bash on debian-based distros.  They may work as is or should be easily modified to work on other distros.
 
@@ -33,4 +33,4 @@ Restores a `ts_backup` snapshot from the `backup_device` to the `restore_device`
 NOTE: As written, `ts_restore` is intended to be used from a server's recovery partition to elmininate discrepancies by running on an active partition.  But it has been tested under both situations and works.  It should also work from a live image but that has not been tested.
 
 ## ts_shared.sh
-Shared functions and variables used by `ts_tools`.
+Shared functions and variables used by `ts_tools`.  This is accessed by the other programs and is expected to be in `/usr/local/lib`.
