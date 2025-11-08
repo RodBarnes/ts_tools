@@ -22,10 +22,10 @@ verify_available_space() {
   IFS=' ' read dev size used avail pcent mount <<< $line
   space=${avail%G}
   if [[ $space -lt $minspace ]]; then
-    printx "The backupdevice '$device' has less only $avail space left of the total $size." >&2
+    showx "The backupdevice '$device' has less only $avail space left of the total $size."
     read -p "Do you want to proceed? (y/N) " yn
     if [[ $yn != "y" && $yn != "Y" ]]; then
-      echo "Operation cancelled." >&2
+      show "Operation cancelled."
       exit
     else
       echo "User acknowledged that backup device has less than $avail space but proceeded." &>> "$g_outputfile"
@@ -39,8 +39,8 @@ create_snapshot() {
   local device=$1 path=$2 name=$3 note=$4 dry=$5 perm=$6
 
   if [[ ! -z $perm ]]; then
-    echo "The backup device does not support permmissions or ownership." >&2
-    echo "The rsync will be performed without attempting to set these options." >&2
+    show "The backup device does not support permmissions or ownership."
+    show "The rsync will be performed without attempting to set these options."
   fi
 
   # Get the name of the most recent backup
@@ -60,15 +60,17 @@ create_snapshot() {
 
   # Create the snapshot
   if [ ! -z $latest ]; then
-    echo "Creating incremental snapshot on '$device'..." >&2
+    show "Creating incremental snapshot on '$device'..."
     type="incr"
     # Snapshots exist so create incremental snapshot referencing the latest
-    sudo rsync -aAX $dry $perm --delete --link-dest="$g_backuppath/$latest" --exclude-from=/etc/ts_excludes / "$path/$name/" &>> "$g_outputfile"
+    echo "rsync -aAX $dry $perm --delete --link-dest=\"$g_backuppath/$g_backupdir/$latest\" $excludearg / \"$path/$name/\"" &>> "$g_outputfile"
+    sudo rsync -aAX $dry $perm --delete --link-dest="$g_backuppath/$g_backupdir/$latest" $excludearg / "$path/$name/" &>> "$g_outputfile"
   else
-    echo "Creating full snapshot on '$device'..." >&2
+    show "Creating full snapshot on '$device'..."
     type="full"
     # This is the first snapshot so create full snapshot
-    sudo rsync -aAX $dry $perm --delete --exclude-from=/etc/ts_excludes / "$path/$name/" &>> "$g_outputfile"
+    echo "rsync -aAX $dry $perm --delete $excludearg / \"$path/$name/\"" &>> "$g_outputfile"
+    sudo rsync -aAX $dry $perm --delete $excludearg / "$path/$name/" &>> "$g_outputfile"
   fi
 
   if [ -z $dry ]; then
@@ -81,9 +83,9 @@ create_snapshot() {
     echo "($type $(sudo du -sh $path/$name | awk '{print $1}')) $note" > "$path/$name/$g_descfile"
 
     # Done
-    echo "The snapshot '$name' was successfully completed." >&2
+    show "The snapshot '$name' was successfully completed."
   else
-    echo "Dry run complete" >&2
+    show "Dry run complete"
   fi
 }
 
@@ -92,10 +94,10 @@ check_rsync_perm() {
 
   unset noperm
   local fstype=$(lsblk --output MOUNTPOINTS,FSTYPE | grep "$path" | tr -s ' ' | cut -d ' ' -f2)
-  echo "Backup device type is: $fstype" &>> "$g_outputfile" 
+  echo "Backup device type is: $fstype" &>> "$g_outputfile"
   case "$fstype" in
     "vfat"|"exfat")
-      echo "NOTE: The backup device '$backupdevice' is $fstype." >&2
+      show "NOTE: The backup device '$backupdevice' is $fstype."
       noperm="--no-perms --no-owner"
       ;;
     "ntfs")

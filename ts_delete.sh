@@ -15,12 +15,12 @@ show_syntax() {
 delete_snapshot() {
   local path=$1 name=$2
 
-  printx "This will completely DELETE the snapshot '$name' and is not recoverable." >&2
-  readx "Are you sure you want to proceed? (y/N) " yn
+  showx "This will completely DELETE the snapshot '$name' and is not recoverable."
+  readx "Are you sure you want to proceed? (y/N)" yn
   if [[ $yn != "y" && $yn != "Y" ]]; then
-    echo "Operation cancelled." >&2
+    show "Operation cancelled."
   else
-    echo "Deleting '$name'." >&2
+    show "Deleting '$name'."
     sudo rm -Rf $path/$name
   fi
 }

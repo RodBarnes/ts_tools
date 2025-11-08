@@ -65,7 +65,7 @@ validate_boot_config() {
 
   # Boot build was not requested so validate restored boot components
   # To see if it should be done anyway...
-  echo "Validating restored boot components..." >&2
+  show "Validating restored boot components..."
   if [ ! -f "$restpath/boot/grub/grub.cfg" ]; then
     echo "Warning: $restpath/boot/grub/grub.cfg not found" &>> "$g_outputfile"
     boot_valid=0
@@ -84,17 +84,17 @@ validate_boot_config() {
   fi
   if [ $boot_valid -eq 0 ]; then
     # There is an issue with the boot configuration
-    printx "The boot configuration on '$restdev' seems incorrect.  To ensure it is bootable" >&2
-    printx "it is recommended to update/install grub and verify/establish a EFI boot entry.  Proceed?" >&2
+    showx "The boot configuration on '$restdev' seems incorrect.  To ensure it is bootable"
+    showx "it is recommended to update/install grub and verify/establish a EFI boot entry.  Proceed?"
     while true; do
       readx "Enter the boot device (or press ENTER to skip):" bootdevice
       if [ -z "$bootdevice" ]; then
-        printx "Skipping GRUB setup. Ensure the EFI boot entry is configured manually." >&2
+        shows "Skipping GRUB setup. Ensure the EFI boot entry is configured manually."
         break
       elif sudo lsblk $bootdevice &> /dev/null; then
         break
       else
-        printx "That is not a recognized device." >&2
+        showx "That is not a recognized device."
       fi
     done
   else
@@ -113,7 +113,7 @@ build_boot() {
   # Mount the necessary directories
   sudo mount $bootdevice "$restpath/boot/efi"
   if [ $? -ne 0 ]; then
-    printx "Unable to mount the EFI System Partition on $bootdevice." >&2
+    showx "Unable to mount the EFI System Partition on $bootdevice."
     exit 2
   fi
   sudo mount --bind /dev "$restpath/dev"
@@ -121,29 +121,29 @@ build_boot() {
   sudo mount --bind /sys "$restpath/sys"
   sudo mount --bind /dev/pts "$restpath/dev/pts"
 
-  echo "Installing grub on $restdev..." >&2
+  show "Installing grub on $restdev..."
   sudo chroot "$restpath" grub-install --target=x86_64-efi --efi-directory=/boot/efi --boot-directory=/boot &>> "$g_outputfile"
   if [ $? -ne 0 ]; then
-    printx "Something went wrong with 'grub-install'.  Check '$g_outputfile' for details." >&2
+    showx "Something went wrong with 'grub-install'.  Check '$g_outputfile' for details."
   fi
   
-  echo "Updating grub on $restdev..." >&2
+  show "Updating grub on $restdev..."
   # Use chroot to rebuild grub on the restored partion
   sudo chroot "$restpath" update-grub &>> "$g_outputfile"
   if [ $? -ne 0 ]; then
-    printx "Something went wrong with 'update-grub'.  Check '$g_outputfile' for details." >&2
+    showx "Something went wrong with 'update-grub'.  Check '$g_outputfile' for details."
   fi
   
-  echo "Checking EFI on $bootdevice" >&2
+  show "Checking EFI on $bootdevice"
   # Check for an existing boot entry
   sudo efibootmgr | grep -q "$osid" &>> "$g_outputfile"
   if ! sudo efibootmgr | grep -q "$osid"; then
-    echo "Building the UEFI boot entry on $bootdevice with an entry for $restdev..." >&2
+    show "Building the UEFI boot entry on $bootdevice with an entry for $restdev..."
 
     # Set UEFI boot entry -- where partno is the target partition for the boot entry
     sudo efibootmgr -c -d $bootdevice -p $partno -L $osid -l "/EFI/$osid/$g_bootfile" &>> "$g_outputfile"
     if [ $? -ne 0 ]; then
-      printx "Something went wrong with 'efibootmgr'. Check '$g_outputfile' for details." >&2
+      showx "Something went wrong with 'efibootmgr'. Check '$g_outputfile' for details."
     fi
   else
     echo "Confirmed EFI boot entry for '$osid' exists." &>> "$g_outputfile"
@@ -191,10 +191,10 @@ restore_snapshot() {
     echo "Restoring '$snapshotname' to '$restoredevice'..."
     echo "---${FUNCNAME}---" &>> "$g_outputfile"
     # Restore the snapshot
-    echo rsync -aAX --delete --verbose "--exclude-from=$excludespathname" "$backpath/$name/" "$restpath/" &>> "$g_outputfile"
-    sudo rsync -aAX --delete --verbose "--exclude-from=$excludespathname" "$backpath/$name/" "$restpath/" &>> "$g_outputfile"
+    echo "rsync -aAX --delete --verbose --exclude-from=\"$excludespathname\" \"$backpath/$name/\" \"$restpath/\"" &>> "$g_outputfile"
+    sudo rsync -aAX --delete --verbose --exclude-from="$excludespathname" "$backpath/$name/" "$restpath/" &>> "$g_outputfile"
     if [ $? -ne 0 ]; then
-      printx "Something went wrong with the restore.  Check '$g_outputfile' for details." >&2
+      showx "Something went wrong with the restore.  Check '$g_outputfile' for details."
       exit 3
     fi
 

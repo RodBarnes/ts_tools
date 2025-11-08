@@ -20,19 +20,19 @@ list_snapshots() {
   local i=0
   while IFS= read -r name; do
     if [ $i -eq 0 ]; then
-      echo "Snapshot files on $device" >&2
+      show "Snapshot files on $device"
     fi
     if [ -f "$path/$name/$g_descfile" ]; then
       note="$(cat $path/$name/$g_descfile)"
     else
       note="<no desc>"
     fi
-    echo "$name: $note" >&2
+    show "$name: $note"
     ((i++))
   done < <( ls -1 "$path" )
 
   if [ $i -eq 0 ]; then
-    printx "There are no backups on $device" >&2
+    showx "There are no backups on $device"
   fi
 }
 
