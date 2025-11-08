@@ -122,7 +122,7 @@ check_rsync_perm() {
 # ------- MAIN -------
 # --------------------
 
-snapshotname=$(date +%Y%m%d_%H%M%S)
+snapshotname=$g_timestamp
 minimum_space=5 # Amount in GB
 
 trap 'unmount_device_at_path "$g_backuppath"' EXIT
