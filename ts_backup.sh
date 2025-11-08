@@ -15,7 +15,7 @@ show_syntax() {
 }
 
 verify_available_space() {
-  local device=$1 path=2 minspace=$3
+  local device=$1 path=$2 minspace=$3
 
   # Check how much space is left
   line=$(df "$path" -BG | sed -n '2p;')
@@ -79,6 +79,7 @@ create_snapshot() {
 check_rsync_perm() {
   local path=$1
 
+  unset noperm
   local fstype=$(lsblk --output MOUNTPOINTS,FSTYPE | grep "$path" | tr -s ' ' | cut -d ' ' -f2)
   echo "Backup device type is: $fstype" &>> "$g_outputfile" 
   case "$fstype" in
@@ -97,7 +98,7 @@ check_rsync_perm() {
       ;;
   esac
 
-  if [ ! -z noperm ]; then
+  if [ ! -z $noperm ]; then
     echo "Using options '$noperm' to prevent attempt to change ownership or permissions." &>> "$g_outputfile"
   fi
 
@@ -173,7 +174,7 @@ if [[ "$EUID" != 0 ]]; then
 fi
 
 # Initialize the log file
-echo &> "$g_outputfile"
+echo -n &> "$g_outputfile"
 
 mount_device_at_path  "$backupdevice" "$g_backuppath" "$g_backupdir"
 verify_available_space "$backupdevice" "$g_backuppath" "$minimum_space"
@@ -181,4 +182,4 @@ perm_opt=$(check_rsync_perm "$g_backuppath")
 create_snapshot "$backupdevice" "$g_backuppath/$g_backupdir" "$snapshotname" "$comment" "$dryrun" "$perm_opt"
 
 echo "✅ Backup complete: $g_backuppath/$g_backupdir/$snapshotname"
-echo "Details of the operation can be viewed in the file /tmp/$g_outputfile"
+echo "Details of the operation can be viewed in the file '$g_outputfile'"

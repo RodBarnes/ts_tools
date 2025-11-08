@@ -286,7 +286,7 @@ if [[ "$EUID" != 0 ]]; then
 fi
 
 # Initialize the log file
-echo &> "$g_outputfile"
+echo -n &> "$g_outputfile"
 
 mount_device_at_path "$restoredevice" "$restorepath"
 mount_device_at_path "$backupdevice" "$g_backuppath" "$g_backupdir"
@@ -343,5 +343,5 @@ if [ ! -z $snapshotname ]; then
     echo "Performing dry-run restore of '$snapshotname' to '$restoredevice'..."
     dryrun_snapshot "$g_backuppath/$g_backupdir" "$snapshotname" "$restorepath"
   fi
-  echo "Details of the operation can be viewed in the file /tmp/$g_outputfile"
+  echo "Details of the operation can be viewed in the file '$g_outputfile'"
 fi
