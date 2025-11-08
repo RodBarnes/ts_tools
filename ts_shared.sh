@@ -2,7 +2,7 @@
 
 # Shared code and variables for ts_tools
 
-source /usr/local/lib/color
+source /usr/local/lib/display
 source /usr/local/lib/device
 
 g_descfile=comment.txt
