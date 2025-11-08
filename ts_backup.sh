@@ -173,9 +173,14 @@ if [ -z $backupdevice ]; then
   show_syntax
 fi
 
-# echo "Device:$backupdevice"
-# echo "Dry-run:$dryrun"
-# echo "Comment:$comment"
+# show "g_backuppath=$g_backuppath"
+# show "g_backupdir=$g_backupdir"
+# show "g_outputfile=$g_outputfile"
+# show "backupdevice=$backupdevice"
+# show "snapshotname=$snapshotname"
+# show "minimum_space=$minimum_space"
+# show "dryrun=$dryrun"
+# show "comment=$comment"
 # exit
 
 # Confirm running as sudo
