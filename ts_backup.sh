@@ -47,6 +47,17 @@ create_snapshot() {
   local latest=$(ls -1 "$path" | grep -E '^[0-9]{8}_[0-9]{6}$' | sort -r | sed -n '1p;')
   local type
 
+  if [ -f "$g_excludesfile" ]; then
+    excludearg="--exclude-from=$g_excludesfile"
+  else
+    printx "No excludes file found at '$g_excludesfile'."
+    readx "Proceed with a complete backup with no exclusions (y/N)" yn
+    if [[ $yn != "y" && $yn != "Y" ]]; then
+      show "Operation cancelled."
+      exit
+    fi
+  fi
+
   # Create the snapshot
   if [ ! -z $latest ]; then
     echo "Creating incremental snapshot on '$device'..." >&2

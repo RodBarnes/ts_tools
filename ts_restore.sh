@@ -176,6 +176,18 @@ restore_snapshot() {
     echo "Operation cancelled."
     exit
   else
+
+    if [ -f "$g_excludesfile" ]; then
+      excludearg="--exclude-from=$g_excludesfile"
+    else
+      printx "No excludes file found at '$g_excludesfile'."
+      readx "Proceed with a complete backup with no exclusions (y/N)" yn
+      if [[ $yn != "y" && $yn != "Y" ]]; then
+        show "Operation cancelled."
+        exit
+      fi
+    fi
+
     echo "Restoring '$snapshotname' to '$restoredevice'..."
     echo "---${FUNCNAME}---" &>> "$g_outputfile"
     # Restore the snapshot
