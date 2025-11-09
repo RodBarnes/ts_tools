@@ -7,10 +7,10 @@ source /usr/local/lib/device
 
 g_timestamp=$(date +%Y%m%d_%H%M%S)
 g_descfile=comment.txt
-g_excludesfile="/etc/ts_excludes"
 g_outputfile="/tmp/$(basename $0)_$g_timestamp.out"
 g_backuppath=/mnt/backup
 g_backupdir="ts"
+g_excludesfile="/etc/ts_excludes"
 g_bootfile="grubx64.efi"  # Default for non-secure boot
 
 select_snapshot() {
