@@ -28,10 +28,10 @@ verify_available_space() {
       show "Operation cancelled."
       exit
     else
-      echo "User acknowledged that backup device has less than $avail space but proceeded." &>> "$g_outputfile"
+      echo "User acknowledged that backup device has less than $avail space but proceeded." &>> "$g_logfile"
     fi
   else
-    echo "Backup device has $avail or more space avaiable; proceeding with backup." &>> "$g_outputfile"
+    echo "Backup device has $avail or more space avaiable; proceeding with backup." &>> "$g_logfile"
   fi
 }
 
@@ -63,14 +63,14 @@ create_snapshot() {
     show "Creating incremental snapshot on '$device'..."
     type="incr"
     # Snapshots exist so create incremental snapshot referencing the latest
-    echo "rsync -aAX $dry $perm --delete --link-dest=\"$g_backuppath/$g_backupdir/$latest\" $excludearg / \"$path/$name/\"" &>> "$g_outputfile"
-    sudo rsync -aAX $dry $perm --delete --link-dest="$g_backuppath/$g_backupdir/$latest" $excludearg / "$path/$name/" &>> "$g_outputfile"
+    echo "rsync -aAX $dry $perm --delete --link-dest=\"$g_backuppath/$g_backupdir/$latest\" $excludearg / \"$path/$name/\"" &>> "$g_logfile"
+    sudo rsync -aAX $dry $perm --delete --link-dest="$g_backuppath/$g_backupdir/$latest" $excludearg / "$path/$name/" &>> "$g_logfile"
   else
     show "Creating full snapshot on '$device'..."
     type="full"
     # This is the first snapshot so create full snapshot
-    echo "rsync -aAX $dry $perm --delete $excludearg / \"$path/$name/\"" &>> "$g_outputfile"
-    sudo rsync -aAX $dry $perm --delete $excludearg / "$path/$name/" &>> "$g_outputfile"
+    echo "rsync -aAX $dry $perm --delete $excludearg / \"$path/$name/\"" &>> "$g_logfile"
+    sudo rsync -aAX $dry $perm --delete $excludearg / "$path/$name/" &>> "$g_logfile"
   fi
 
   if [ -z $dry ]; then
@@ -94,7 +94,7 @@ check_rsync_perm() {
 
   unset noperm
   local fstype=$(lsblk --output MOUNTPOINTS,FSTYPE | grep "$path" | tr -s ' ' | cut -d ' ' -f2)
-  echo "Backup device type is: $fstype" &>> "$g_outputfile"
+  echo "Backup device type is: $fstype" &>> "$g_logfile"
   case "$fstype" in
     "vfat"|"exfat")
       show "NOTE: The backup device '$backupdevice' is $fstype."
@@ -112,7 +112,7 @@ check_rsync_perm() {
   esac
 
   if [ ! -z $noperm ]; then
-    echo "Using options '$noperm' to prevent attempt to change ownership or permissions." &>> "$g_outputfile"
+    echo "Using options '$noperm' to prevent attempt to change ownership or permissions." &>> "$g_logfile"
   fi
 
   echo $noperm
@@ -177,7 +177,7 @@ fi
 
 # show "g_backuppath=$g_backuppath"
 # show "g_backupdir=$g_backupdir"
-# show "g_outputfile=$g_outputfile"
+# show "g_logfile=$g_logfile"
 # show "backupdevice=$backupdevice"
 # show "snapshotname=$snapshotname"
 # show "minimum_space=$minimum_space"
@@ -192,7 +192,7 @@ if [[ "$EUID" != 0 ]]; then
 fi
 
 # Initialize the log file
-echo -n &> "$g_outputfile"
+echo -n &> "$g_logfile"
 
 mount_device_at_path  "$backupdevice" "$g_backuppath" "$g_backupdir"
 verify_available_space "$backupdevice" "$g_backuppath" "$minimum_space"
@@ -200,4 +200,4 @@ perm_opt=$(check_rsync_perm "$g_backuppath")
 create_snapshot "$backupdevice" "$g_backuppath/$g_backupdir" "$snapshotname" "$comment" "$dryrun" "$perm_opt"
 
 echo "✅ Backup complete: $g_backuppath/$g_backupdir/$snapshotname"
-echo "Details of the operation can be viewed in the file '$g_outputfile'"
+echo "Details of the operation can be viewed in the file '$g_logfile'"
