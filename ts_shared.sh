@@ -29,9 +29,9 @@ select_snapshot() {
   done < <( find $path -mindepth 1 -maxdepth 1 -type d | cut -d '/' -f5 )
 
   if [ ${#snapshots[@]} -eq 0 ]; then
-    printx "There are no backups on $device" >&2
+    showx "There are no backups on $device"
   else
-    echo "Listing backup files..." >&2
+    show "Listing backup files..."
 
     # Get the count of options and increment to include the cancel
     count="${#snapshots[@]}"
@@ -52,7 +52,7 @@ select_snapshot() {
             ;;
         esac
       else
-        printx "Invalid selection. Please enter a number between 1 and $count." >&2
+        showx "Invalid selection. Please enter a number between 1 and $count."
       fi
     done
   fi
