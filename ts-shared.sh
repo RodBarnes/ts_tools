@@ -5,7 +5,7 @@
 source /usr/local/lib/display.sh
 source /usr/local/lib/device.sh
 
-VERSION="20260425"
+VERSION="20260713"
 
 g_infofile=info.json
 g_backuppath=/mnt/backup
@@ -28,19 +28,32 @@ get_device() {
 # Populate g_snapshots with all snapshots found under path.
 # Each entry is "hostname/snapshotname|comment"
 # Entries are sorted by hostname then snapshotname.
+# If hostname_filter is given, only that hostname's snapshots are collected.
 collect_snapshots() {
   local path=$1
+  local hostname_filter=$2
 
   local comment
   local snapshot
   local infopath
   local hostnamedir
+  local hostnamedirs=()
   local raw=()
   local entry
 
   g_snapshots=()
 
-  while IFS= read -r hostnamedir; do
+  if [ -n "$hostname_filter" ]; then
+    if [ -d "$path/$hostname_filter" ]; then
+      hostnamedirs=("$path/$hostname_filter")
+    fi
+  else
+    while IFS= read -r hostnamedir; do
+      hostnamedirs+=("$hostnamedir")
+    done < <( find "$path" -mindepth 1 -maxdepth 1 -type d | sort )
+  fi
+
+  for hostnamedir in "${hostnamedirs[@]}"; do
     while IFS= read -r snapshot; do
       infopath="$hostnamedir/$snapshot/$g_infofile"
       if [ -f "$infopath" ]; then
@@ -50,7 +63,7 @@ collect_snapshots() {
       fi
       raw+=("${hostnamedir##*/}/$snapshot|$comment")
     done < <( find "$hostnamedir" -mindepth 1 -maxdepth 1 -type d | xargs -I{} basename {} | grep -E '^[0-9]{8}_[0-9]{6}$' | sort )
-  done < <( find "$path" -mindepth 1 -maxdepth 1 -type d | sort )
+  done
 
   # Sort by hostname then snapshotname (both are in the key portion before |)
   while IFS= read -r entry; do
@@ -102,6 +115,7 @@ format_snapshot_line() {
 select_snapshot() {
   local device=$1
   local path=$2
+  local hostname_filter=$3
 
   local count
   local entry
@@ -111,10 +125,14 @@ select_snapshot() {
   local reply
   local name
 
-  collect_snapshots "$path"
+  collect_snapshots "$path" "$hostname_filter"
 
   if [ ${#g_snapshots[@]} -eq 0 ]; then
-    showx "There are no backups on $device"
+    if [ -n "$hostname_filter" ]; then
+      showx "There are no backups on $device for server '$hostname_filter'"
+    else
+      showx "There are no backups on $device"
+    fi
     return
   fi
 

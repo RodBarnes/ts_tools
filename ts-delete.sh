@@ -5,12 +5,13 @@
 source /usr/local/lib/ts-shared.sh
 LIB_VERSION="$VERSION"
 
-VERSION="20260425"
+VERSION="20260713"
 
 show_syntax() {
   echo "Delete a snapshot created with ts-backup."
-  echo "Syntax: $(basename $0) <backup_device>"
+  echo "Syntax: $(basename $0) <backup_device> [server]"
   echo "Where:  <backup_device> can be a device designator (e.g., /dev/sdb6), a UUID, filesystem LABEL, or partition UUID"
+  echo "        [server] optionally limits the selection list to snapshots for that server only."
   echo "        [-V|--version] will display the version."
   echo "NOTE:   Must be run as sudo."
   exit
@@ -71,6 +72,7 @@ if [[ "$1" == "-V" || "$1" == "--version" ]]; then
   exit 0
 elif [ $# -ge 1 ]; then
   backupdevice=$(get_device "$1")
+  server="$2"
 else
   show_syntax
 fi
@@ -88,7 +90,7 @@ show_device_space "$backupdevice"
 
 while true; do
   # select_snapshot returns "hostname/snapshotname"
-  snapshotsubpath=$(select_snapshot "$backupdevice" "$g_backuppath/$g_backupdir")
+  snapshotsubpath=$(select_snapshot "$backupdevice" "$g_backuppath/$g_backupdir" "$server")
   if [ -n "$snapshotsubpath" ]; then
     delete_snapshot "$g_backuppath/$g_backupdir" "$snapshotsubpath"
   else

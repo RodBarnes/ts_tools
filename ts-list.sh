@@ -5,12 +5,13 @@
 source /usr/local/lib/ts-shared.sh
 LIB_VERSION="$VERSION"
 
-VERSION="20260425"
+VERSION="20260713"
 
 show_syntax() {
   echo "List all snapshots created by ts-backup."
-  echo "Syntax: $(basename $0) <backup_device>"
+  echo "Syntax: $(basename $0) <backup_device> [server]"
   echo "Where:  <backup_device> can be a device designator (e.g., /dev/sdb6), a UUID, filesystem LABEL, or partition UUID"
+  echo "        [server] optionally filters the list to snapshots for that server only."
   echo "        [-V|--version] will display the version."
   echo "NOTE:   Must be run as sudo."
   exit
@@ -19,15 +20,20 @@ show_syntax() {
 list_snapshots() {
   local device=$1
   local path=$2
+  local server=$3
 
   local entry
   local key
   local comment
 
-  collect_snapshots "$path"
+  collect_snapshots "$path" "$server"
 
   if [ ${#g_snapshots[@]} -eq 0 ]; then
-    showx "There are no backups on $device"
+    if [ -n "$server" ]; then
+      showx "There are no backups on $device for server '$server'"
+    else
+      showx "There are no backups on $device"
+    fi
     return
   fi
 
@@ -57,6 +63,7 @@ if [[ "$1" == "-V" || "$1" == "--version" ]]; then
   exit 0
 elif [ $# -ge 1 ]; then
   backupdevice=$(get_device "$1")
+  server="$2"
 else
   show_syntax
 fi
@@ -69,4 +76,4 @@ if [[ ! -b $backupdevice ]]; then
 fi
 
 mount_device_at_path "$backupdevice" "$g_backuppath" "$g_backupdir"
-list_snapshots "$backupdevice" "$g_backuppath/$g_backupdir"
+list_snapshots "$backupdevice" "$g_backuppath/$g_backupdir" "$server"
